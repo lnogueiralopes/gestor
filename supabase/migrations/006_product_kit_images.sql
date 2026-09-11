@@ -1,5 +1,5 @@
 -- Six ordered image slots for catalog products and kits.
-create unique index products_ean_unique on public.products(ean);
+-- EAN uniqueness is already enforced by migration 003.
 -- Values may be public URLs or paths in the future Supabase/Cloudflare image bucket.
 alter table public.products
   add column image_1_url text,
