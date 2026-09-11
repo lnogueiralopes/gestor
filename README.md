@@ -74,9 +74,10 @@ No SQL Editor do projeto **gestor**, em um banco novo, execute **na ordem**:
 1. `supabase/migrations/001_initial_schema.sql`.
 2. `supabase/migrations/002_access_hardening.sql`.
 3. `supabase/migrations/003_ean_sku.sql`.
-4. Opcionalmente `supabase/seed.sql`, somente para dados de demonstração.
+4. `supabase/migrations/004_internal_barcodes.sql`.
+5. Opcionalmente `supabase/seed.sql`, somente para dados de demonstração.
 
-As migrations são aplicadas uma vez. O seed pode ser repetido. Se a 001 já foi aplicada, execute a 002 e depois a 003; não recrie tabelas. A 002 é transacional e falhará se já houver anúncios duplicados por produto/kit e conta; nesse caso revise os duplicados antes de reaplicar, sem apagar dados automaticamente.
+As migrations são aplicadas uma vez. O seed pode ser repetido. Se a 001 já foi aplicada, execute as migrations restantes na ordem (002, 003, 004); não recrie tabelas. A 002 é transacional e falhará se já houver anúncios duplicados por produto/kit e conta; nesse caso revise os duplicados antes de reaplicar, sem apagar dados automaticamente.
 
 Depois crie o primeiro usuário em Authentication e atribua o perfil pelo SQL Editor:
 
@@ -109,7 +110,7 @@ Um endpoint futuro que use Service Role deverá validar o token do usuário, seu
 
 ## Testes e limites
 
-`npm test` aplica as três migrations e o seed num PostgreSQL local em memória (PGlite), com papéis de autenticação simulados. Verifica estoque dos kits, seed repetível, isolamento por conta, usuários inativos, bloqueio anônimo, bloqueio de escrita e duplicidade de anúncios. PGlite usa `gen_random_uuid` nativo; a criação da extensão `pgcrypto` é omitida somente no teste. Isso não substitui validar a configuração de Auth e as migrations no projeto Supabase real.
+`npm test` aplica as quatro migrations e o seed num PostgreSQL local em memória (PGlite), com papéis de autenticação simulados. Verifica estoque dos kits, seed repetível, isolamento por conta, usuários inativos, bloqueio anônimo, bloqueio de escrita e duplicidade de anúncios. PGlite usa `gen_random_uuid` nativo; a criação da extensão `pgcrypto` é omitida somente no teste. Isso não substitui validar a configuração de Auth e as migrations no projeto Supabase real.
 
 ## Referências
 
@@ -126,7 +127,19 @@ Paleta da marca: azul celeste #74B9FF, branco #FFFFFF, dourado #D4AF37 e azul no
 
 - Produto unitário com EAN: SKU = EAN (texto, preservando zeros à esquerda).
 - Kit com um único produto na composição: SKU = EAN + `_x` + quantidade. Exemplo: `7790000000011_x2`.
-- Kit misto: mantém SKU próprio, como `KIT003`.
-- Produto sem EAN: mantém SKU manual como exceção até receber EAN.
+- Kit misto: recebe SKU sequencial `kitmix_00001`, `kitmix_00002` etc.
+- Produto sem EAN: recebe código interno EAN-13; esse mesmo código vira seu SKU.
 
 A migration 003 atualiza registros existentes mantendo os UUIDs e vínculos. Conflitos de SKU interrompem a migration sem excluir registros. Novos cadastros e alterações de EAN ou quantidade atualizam automaticamente os SKUs. A composição completa de um kit deve ser gravada em uma única transação: a regra é aplicada no commit para não confundir um kit misto parcialmente cadastrado com um kit de produto único. A V1 continua demonstrativa; estas regras estão preparadas para o futuro cadastro real.
+
+## Códigos internos para produtos e kits
+
+A migration 004 acrescenta EAN aos kits e identifica a origem interna em `ean_is_internal`. Kits sem EAN e produtos sem EAN recebem códigos com prefixo **04**, dez posições de sequência e um dígito verificador módulo 10 (13 dígitos no total). Exemplo: `0400000000015`. Esse prefixo é destinado à numeração interna de empresas; os códigos não são GTINs globais atribuídos pela GS1. Não os exporte como GTIN oficial aos marketplaces. O campo `ean_is_internal` deve ser respeitado pelos futuros conectores.
+
+As sequências PostgreSQL são únicas no projeto gestor e não são calculadas por contagem de linhas. Um registro privado compartilhado reserva códigos para produtos e kits, rejeita colisões e mantém códigos antigos reservados mesmo após exclusão ou substituição. Os registros existentes são reservados antes da geração; candidatos ocupados são pulados. Não há garantia de unicidade fora deste banco/empresa. Não reinicie sequências ou exclua os registros de reserva. Backups e restaurações devem incluir o schema `private` e suas sequências.
+
+O SKU de kit homogêneo continua `EAN_DO_PRODUTO_xQUANTIDADE`, enquanto seu EAN interno é independente e estável. Kits mistos recebem `kitmix_00001` em diante; lacunas são normais após falhas ou exclusões. A sequência aumenta além de cinco dígitos sem truncamento. Kits sem composição são rascunhos; o SKU definitivo é aplicado no commit da transação que grava a composição inteira. Releia o kit após o commit para obter o SKU definitivo.
+
+O seed é somente demonstrativo e identifica os kits pelo nome e descrição dos exemplos para permitir repetição. Não o utilize como importador de catálogo real. As migrations falham e revertem a transação se encontrarem códigos conflitantes; nenhum registro é apagado automaticamente. Os testes cobrem a migração de dados anteriores, dígitos verificadores, bloqueio de duplicidade entre produto e kit, não reutilização, sequências e preservação dos códigos. A ativação no Supabase real continua pendente.
+
+[GS1, seção 2.1.11.2: numeração interna RCN-13 com prefixo 04](https://ref.gs1.org/standards/genspecs/24.0.0/).

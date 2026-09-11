@@ -3,12 +3,15 @@ export type Product = {
   sku: string;
   name: string;
   ean: string;
+  eanIsInternal: boolean;
   cost: number;
   margin: number;
   stock: number;
 };
 
 export type Kit = {
+  ean: string;
+  eanIsInternal: boolean;
   id: string;
   sku: string;
   name: string;
@@ -23,15 +26,15 @@ export type ChannelCell = {
 };
 
 export const products: Product[] = [
-  { id: "p1", sku: "7790000000011", name: "Catena Malbec 750ml", ean: "7790000000011", cost: 70, margin: 30, stock: 30 },
-  { id: "p2", sku: "7790000000028", name: "Rutini Malbec 750ml", ean: "7790000000028", cost: 82, margin: 28, stock: 12 },
-  { id: "p3", sku: "7790000000035", name: "Alamos Malbec 750ml", ean: "7790000000035", cost: 55, margin: 25, stock: 18 }
+  { id: "p1", sku: "7790000000011", name: "Catena Malbec 750ml", ean: "7790000000011", eanIsInternal: false, cost: 70, margin: 30, stock: 30 },
+  { id: "p2", sku: "7790000000028", name: "Rutini Malbec 750ml", ean: "7790000000028", eanIsInternal: false, cost: 82, margin: 28, stock: 12 },
+  { id: "p3", sku: "7790000000035", name: "Alamos Malbec 750ml", ean: "7790000000035", eanIsInternal: false, cost: 55, margin: 25, stock: 18 }
 ];
 
 export const kits: Kit[] = [
-  { id: "k1", sku: "7790000000011_x2", name: "Kit 2 Catena Malbec", components: "2× 7790000000011", units: 2, available: 15 },
-  { id: "k2", sku: "7790000000011_x3", name: "Kit 3 Catena Malbec", components: "3× 7790000000011", units: 3, available: 10 },
-  { id: "k3", sku: "KIT003", name: "Trio Argentina", components: "7790000000011 + 7790000000028 + 7790000000035", units: 3, available: 12 }
+  { id: "k1", ean: "0400000000015", eanIsInternal: true, sku: "7790000000011_x2", name: "Kit 2 Catena Malbec", components: "2× 7790000000011", units: 2, available: 15 },
+  { id: "k2", ean: "0400000000022", eanIsInternal: true, sku: "7790000000011_x3", name: "Kit 3 Catena Malbec", components: "3× 7790000000011", units: 3, available: 10 },
+  { id: "k3", ean: "0400000000039", eanIsInternal: true, sku: "kitmix_00001", name: "Trio Argentina", components: "7790000000011 + 7790000000028 + 7790000000035", units: 3, available: 12 }
 ];
 
 export const accounts = [

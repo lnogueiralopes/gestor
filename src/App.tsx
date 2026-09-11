@@ -117,7 +117,7 @@ function Matrix({ kind }: MatrixProps) {
   const matrix = kind === "products" ? productMatrix : kitMatrix;
   const [selected, setSelected] = useState<string[]>([]);
   const [search, setSearch] = useState("");
-  const visibleRows = rows.filter(row => `${row.sku} ${row.name}`.toLocaleLowerCase("pt-BR").includes(search.toLocaleLowerCase("pt-BR")));
+  const visibleRows = rows.filter(row => `${row.sku} ${row.ean} ${row.name}`.toLocaleLowerCase("pt-BR").includes(search.toLocaleLowerCase("pt-BR")));
 
   const allChecked = visibleRows.length > 0 && visibleRows.every(row => selected.includes(row.id));
   const toggleAll = () => setSelected(current => allChecked ? current.filter(id => !visibleRows.some(row => row.id === id)) : [...new Set([...current, ...visibleRows.map(row => row.id)])]);
@@ -135,7 +135,7 @@ function Matrix({ kind }: MatrixProps) {
         <button disabled>Atualizar preços</button>
         <button disabled>Sincronizar estoque</button>
         <span className="spacer" />
-        <input aria-label="Buscar SKU ou produto" placeholder="Buscar SKU ou produto..." value={search} onChange={e => setSearch(e.target.value)} />
+        <input aria-label="Buscar SKU, EAN ou produto" placeholder="Buscar SKU, EAN ou produto..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
       <div className="tableWrap card">
         <table>
@@ -143,6 +143,7 @@ function Matrix({ kind }: MatrixProps) {
             <tr>
               <th><input aria-label="Selecionar todos os resultados" type="checkbox" checked={allChecked} onChange={toggleAll} /></th>
               <th>SKU</th>
+              <th>EAN / código interno</th>
               <th>{kind === "products" ? "Produto" : "Kit"}</th>
               {kind === "products" ? <><th>Estoque</th><th>Margem</th></> : <><th>Composição</th><th>Disponível</th></>}
               {accounts.map(a => <th key={a.id}>{a.name}<small>{a.channel}</small></th>)}
@@ -153,6 +154,7 @@ function Matrix({ kind }: MatrixProps) {
               <tr key={row.id}>
                 <td><input aria-label={`Selecionar ${row.sku}`} type="checkbox" checked={selected.includes(row.id)} onChange={() => toggle(row.id)} /></td>
                 <td><strong>{row.sku}</strong></td>
+                <td><span className="barcodeNumber">{row.ean}</span>{row.eanIsInternal && <small className="internalCode" title="Código de uso interno; não é GTIN oficial para marketplaces">Uso interno</small>}</td>
                 <td>{row.name}</td>
                 {kind === "products" ? <><td>{row.stock}</td><td>{row.margin}%</td></> : <><td>{row.components}</td><td>{row.available}</td></>}
                 {accounts.map(a => <td key={a.id}><StatusBadge cell={(matrix as any)[row.id][a.id]} /></td>)}
