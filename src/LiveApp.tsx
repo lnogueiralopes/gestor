@@ -39,20 +39,20 @@ export default function LiveApp() {
   }, [session?.user.id]);
   if (!ready) return <main className="card">Carregando…</main>;
   if (!supabase) return <main className="card">A conexão com o catálogo está sendo configurada.</main>;
-  if (!session) return <main className="card rocketLogin">
-    <div className="rocketLogoPanel"><img src="/brand/rocket-ia-logo.png" alt="Rocket" /><span>Rocket.IA</span></div>
-    <h1>Entrar na Rocket.IA</h1>
+  if (!session) return <div className="rocketLoginPage"><div className="rocketLoginArtwork" aria-hidden="true" /><main className="card rocketLogin">
+    <div className="rocketLogoPanel"><img src="/brand/rocket-ia-logo.png" alt="Rocket" /></div>
+    <h1>Acesse sua conta</h1>
     <form onSubmit={async e => { e.preventDefault(); setBusy(true); setMessage(''); try { if (!login.includes('@')) { setMessage('O login por usuário curto será ativado na próxima atualização. Use o e-mail cadastrado por enquanto.'); setBusy(false); return; } const {error} = await supabase!.auth.signInWithPassword({email:login.trim(),password}); if(error) setMessage('Não foi possível entrar. Confira seu usuário e senha.'); else setPassword(''); } catch { setMessage('Falha de conexão. Tente novamente.'); } finally {setBusy(false);} }}>
       <label>Usuário<input style={{display:'block',width:'100%',margin:'8px 0 16px'}} type="text" autoComplete="username" required value={login} onChange={e=>setLogin(e.target.value)} /></label>
       <label>Senha<input style={{display:'block',width:'100%',margin:'8px 0 16px'}} type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} /></label>
       <button className="primary" disabled={busy}>{busy?'Entrando…':'Entrar'}</button>
       <p role="status">{message}</p>
     </form>
-  </main>;
+  </main></div>;
   const visible = rows.filter(p => `${p.name} ${p.ean} ${p.brand ?? ''}`.toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR')));
   const openForm = (product?: Product) => { setFormOpen(true); setEditing(product ?? null); setForm({ ean: product?.ean ?? '', name: product?.name ?? '', brand: product?.brand ?? '', vintage: product?.vintage ?? '', stock_on_hand: String(product?.stock_on_hand ?? 0) }); };
   const saveProduct = async (e: FormEvent) => { e.preventDefault(); setBusy(true); setMessage(''); const payload={ean:form.ean.trim(),sku:form.ean.trim(),name:form.name.trim(),brand:form.brand.trim()||null,vintage:form.vintage.trim()||null,stock_on_hand:Number(form.stock_on_hand)}; const result=editing ? await supabase!.from('products').update(payload).eq('id',editing.id).select().single() : await supabase!.from('products').insert(payload).select().single(); if(result.error) setMessage(result.error.message.includes('duplicate')?'Esse EAN já está cadastrado.':'Não foi possível salvar o produto.'); else { setRows(current=>editing?current.map(p=>p.id===editing.id?result.data as Product:p):[...current,result.data as Product]); setEditing(null); setFormOpen(false); } setBusy(false); };
-  return <main className="rocketWorkspace"><div className="rocketTopbar"><img src="/brand/rocket-ia-logo.png" alt="Rocket" /><strong>Rocket<span>.IA</span></strong><span>GESTÃO E AUTOMAÇÃO</span></div>
+  return <main className="rocketWorkspace"><div className="rocketTopbar"><img src="/brand/rocket-ia-logo.png" alt="Rocket" /><span>GESTÃO E AUTOMAÇÃO</span></div>
     <header className="pageHeader"><div><h1>Produtos</h1><p>{rows.length} produtos no catálogo</p></div><div><button className="primary" onClick={()=>openForm()}>Novo produto</button>{' '}<button onClick={async()=>{ const {error}=await supabase!.auth.signOut(); if(error) setMessage('Não foi possível sair. Tente novamente.'); }}>Sair</button></div></header>
     {formOpen && <form className="card" onSubmit={saveProduct} style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:12,marginBottom:20}}><label>EAN<input required value={form.ean} onChange={e=>setForm({...form,ean:e.target.value})} disabled={Boolean(editing?.id)} /></label><label>Nome<input required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} /></label><label>Marca<input value={form.brand} onChange={e=>setForm({...form,brand:e.target.value})} /></label><label>Safra<input value={form.vintage} onChange={e=>setForm({...form,vintage:e.target.value})} /></label><label>Estoque<input type="number" min="0" value={form.stock_on_hand} onChange={e=>setForm({...form,stock_on_hand:e.target.value})} /></label><div><button className="primary" disabled={busy}>Salvar</button>{' '}<button type="button" onClick={()=>setFormOpen(false)}>Cancelar</button></div></form>}
     <p className="muted">Catálogo conectado. Edição, kits e precificação serão ativados nas próximas etapas.</p>
