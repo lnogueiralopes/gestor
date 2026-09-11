@@ -75,9 +75,10 @@ No SQL Editor do projeto **gestor**, em um banco novo, execute **na ordem**:
 2. `supabase/migrations/002_access_hardening.sql`.
 3. `supabase/migrations/003_ean_sku.sql`.
 4. `supabase/migrations/004_internal_barcodes.sql`.
-5. Opcionalmente `supabase/seed.sql`, somente para dados de demonstração.
+5. `supabase/migrations/005_kit_margin_bands.sql`.
+6. Opcionalmente `supabase/seed.sql`, somente para dados de demonstração.
 
-As migrations são aplicadas uma vez. O seed pode ser repetido. Se a 001 já foi aplicada, execute as migrations restantes na ordem (002, 003, 004); não recrie tabelas. A 002 é transacional e falhará se já houver anúncios duplicados por produto/kit e conta; nesse caso revise os duplicados antes de reaplicar, sem apagar dados automaticamente.
+As migrations são aplicadas uma vez. O seed pode ser repetido. Se a 001 já foi aplicada, execute as migrations restantes na ordem (002, 003, 004, 005); não recrie tabelas. A 002 é transacional e falhará se já houver anúncios duplicados por produto/kit e conta; nesse caso revise os duplicados antes de reaplicar, sem apagar dados automaticamente.
 
 Depois crie o primeiro usuário em Authentication e atribua o perfil pelo SQL Editor:
 
@@ -110,7 +111,7 @@ Um endpoint futuro que use Service Role deverá validar o token do usuário, seu
 
 ## Testes e limites
 
-`npm test` aplica as quatro migrations e o seed num PostgreSQL local em memória (PGlite), com papéis de autenticação simulados. Verifica estoque dos kits, seed repetível, isolamento por conta, usuários inativos, bloqueio anônimo, bloqueio de escrita e duplicidade de anúncios. PGlite usa `gen_random_uuid` nativo; a criação da extensão `pgcrypto` é omitida somente no teste. Isso não substitui validar a configuração de Auth e as migrations no projeto Supabase real.
+`npm test` aplica as cinco migrations e o seed num PostgreSQL local em memória (PGlite), com papéis de autenticação simulados. Verifica estoque dos kits, seed repetível, isolamento por conta, usuários inativos, bloqueio anônimo, bloqueio de escrita e duplicidade de anúncios. PGlite usa `gen_random_uuid` nativo; a criação da extensão `pgcrypto` é omitida somente no teste. Isso não substitui validar a configuração de Auth e as migrations no projeto Supabase real.
 
 ## Referências
 
@@ -143,3 +144,7 @@ O SKU de kit homogêneo continua `EAN_DO_PRODUTO_xQUANTIDADE`, enquanto seu EAN 
 O seed é somente demonstrativo e identifica os kits pelo nome e descrição dos exemplos para permitir repetição. Não o utilize como importador de catálogo real. As migrations falham e revertem a transação se encontrarem códigos conflitantes; nenhum registro é apagado automaticamente. Os testes cobrem a migração de dados anteriores, dígitos verificadores, bloqueio de duplicidade entre produto e kit, não reutilização, sequências e preservação dos códigos. A ativação no Supabase real continua pendente.
 
 [GS1, seção 2.1.11.2: numeração interna RCN-13 com prefixo 04](https://ref.gs1.org/standards/genspecs/24.0.0/).
+
+## Redução de margem por quantidade
+
+Faixas independentes: 1, 2, 3, 4, 5, 6 e >6. Valores em pontos percentuais, com duas casas decimais. Padrões demo: 0,00; 1,00; 1,00; 2,00; 2,00; 3,00; 3,00. A migration 005 separa faixas existentes preservando seus valores; faixas antes ausentes herdam o valor da faixa anterior. No banco, >6 usa min_units=7 e max_units=NULL (sem limite superior). Para consultar uma faixa, use min_units <= quantidade AND (max_units IS NULL OR max_units >= quantidade). A interface ainda não salva alterações no banco nesta V1 demo.

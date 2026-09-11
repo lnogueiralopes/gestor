@@ -174,8 +174,15 @@ function Pricing() {
   const updateParam = (i: number, value: string) =>
     setParams(p => p.map((x, idx) => idx === i ? { ...x, value } : x));
 
-  const updateRule = (i: number, value: string) =>
-    setRules(r => r.map((x, idx) => idx === i ? { ...x, reduction: value } : x));
+  const updateRule = (i: number, value: string) => {
+    if (/^\d{0,6}([,.]\d{0,2})?$/.test(value))
+      setRules(r => r.map((x, idx) => idx === i ? { ...x, reduction: value } : x));
+  };
+  const formatRule = (i: number) => setRules(r => r.map((x, idx) => {
+    if (idx !== i) return x;
+    const value = Number(x.reduction.replace(",", "."));
+    return { ...x, reduction: (Number.isFinite(value) ? value : 0).toFixed(2).replace(".", ",") };
+  }));
 
   return (
     <>
@@ -195,7 +202,7 @@ function Pricing() {
           <table className="compact">
             <thead><tr><th>Quantidade</th><th>Redução (p.p.)</th></tr></thead>
             <tbody>
-              {rules.map((r, i) => <tr key={r.qty}><td>{r.qty}</td><td><input value={r.reduction} onChange={e => updateRule(i, e.target.value)} /></td></tr>)}
+              {rules.map((r, i) => <tr key={r.qty}><td>{r.qty}</td><td><input aria-label={`Redução para ${r.qty} unidades`} inputMode="decimal" value={r.reduction} onChange={e => updateRule(i, e.target.value)} onBlur={() => formatRule(i)} /></td></tr>)}
             </tbody>
           </table>
           <button className="primary" disabled>Salvar regras</button>

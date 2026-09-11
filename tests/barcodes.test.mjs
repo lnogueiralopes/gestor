@@ -77,12 +77,17 @@ test('fresh database applies all migrations before repeatable demo seed', async 
     await db.exec(`create role anon; create role authenticated; create schema auth;
       create table auth.users(id uuid primary key);
       create function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;`);
-    for (const file of ['001_initial_schema.sql','002_access_hardening.sql','003_ean_sku.sql','004_internal_barcodes.sql']) {
+    for (const file of ['001_initial_schema.sql','002_access_hardening.sql','003_ean_sku.sql','004_internal_barcodes.sql','005_kit_margin_bands.sql']) {
       const sql = await readFile(new URL('../supabase/migrations/' + file, import.meta.url), 'utf8');
       await db.exec(sql.replace('create extension if not exists "pgcrypto";', ''));
     }
     const seed = await readFile(new URL('../supabase/seed.sql',import.meta.url), 'utf8');
     await db.exec(seed); await db.exec(seed);
+    const bands=(await db.query('select min_units,max_units,reduction_pp from public.kit_margin_rules order by min_units')).rows;
+    assert.deepEqual(bands.map(r=>[r.min_units,r.max_units,Number(r.reduction_pp)]),[[1,1,0],[2,2,1],[3,3,1],[4,4,2],[5,5,2],[6,6,3],[7,null,3]]);
+    await db.exec('update public.kit_margin_rules set reduction_pp=1.25 where min_units=2');
+    assert.equal(Number((await db.query('select reduction_pp from public.kit_margin_rules where min_units=3')).rows[0].reduction_pp),1);
+    assert.equal((await db.query('select min_units from public.kit_margin_rules where min_units<=100 and (max_units is null or max_units>=100)')).rows[0].min_units,7);
     const kits=(await db.query('select sku,ean from public.kits order by ean')).rows;
     assert.deepEqual(kits,[
       {sku:'7790000000011_x2',ean:'0400000000015'},

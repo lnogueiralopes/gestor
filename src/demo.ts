@@ -63,8 +63,11 @@ export const pricingParameters = [
 ];
 
 export const kitRules = [
-  { qty: "1", reduction: "0" },
-  { qty: "2-3", reduction: "1" },
-  { qty: "4", reduction: "2" },
-  { qty: "6", reduction: "3" }
+  { qty: "1", reduction: "0,00" },
+  { qty: "2", reduction: "1,00" },
+  { qty: "3", reduction: "1,00" },
+  { qty: "4", reduction: "2,00" },
+  { qty: "5", reduction: "2,00" },
+  { qty: "6", reduction: "3,00" },
+  { qty: ">6", reduction: "3,00" }
 ];
