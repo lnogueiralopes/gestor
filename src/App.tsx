@@ -37,12 +37,12 @@ function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div className="brand" aria-label="Ruta Directa — Vinhos Argentinos">
-        <img className="brandMark" src="/brand/ruta-directa-symbol.svg" alt="" />
-        <div className="brandWords"><strong>RUTA</strong><span>DIRECTA</span></div>
+      <div className="brand" aria-label="Rocket.IA">
+        <img className="brandMark rocketLogo" src="/brand/rocket-ia-logo.png" alt="Rocket.IA" />
+        <div className="brandWords"><strong>ROCKET</strong><span>.IA</span></div>
       </div>
-      <div className="brandSignature">VINHOS ARGENTINOS</div>
-      <div className="navCaption">GESTOR COMERCIAL</div>
+      <div className="brandSignature">AUTOMAÇÃO INTELIGENTE</div>
+      <div className="navCaption">GESTOR OPERACIONAL</div>
       <nav>
         {links.map(([to, label]) => (
           <NavLink key={to} to={to} end={to === "/"}>
@@ -293,4 +293,5 @@ function AppShell() {
 export default function App() {
   return <AppShell />;
 }
+
 
