@@ -1,0 +1,10 @@
+SUPABASE_URL=https://SEU-PROJETO.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=SUA_SERVICE_ROLE_KEY
+
+ML_CLIENT_ID=
+ML_CLIENT_SECRET=
+ML_REDIRECT_URI=http://localhost:5173/api/marketplaces/mercadolivre/callback
+
+SHOPEE_PARTNER_ID=
+SHOPEE_PARTNER_KEY=
+SHOPEE_REDIRECT_URI=http://localhost:5173/api/marketplaces/shopee/callback
