@@ -24,7 +24,7 @@ function StatusBadge({ cell }: { cell: ChannelCell }) {
 
 function Sidebar() {
   const links = [
-    ["/", "Dashboard"],
+    ["/dashboard", "Dashboard"],
     ["/produtos", "Produtos"],
     ["/kits", "Kits"],
     ["/precificador", "Precificador"],
@@ -33,13 +33,14 @@ function Sidebar() {
     ["/contas", "Contas"],
     ["/usuarios", "Usuários"],
     ["/configuracoes", "Configurações"],
+    ["/automacoes", "Automações"],
   ];
 
   return (
     <aside className="sidebar">
-      <div className="brand" aria-label="Rocket.IA">
-        <img className="brandMark rocketLogo" src="/brand/rocket-ia-logo.png" alt="Rocket.IA" />
-        <div className="brandWords"><strong>ROCKET</strong><span>.IA</span></div>
+      <div className="brand" aria-label="Rocket">
+        <img className="brandMark rocketLogo" src="/brand/rocket-ia-logo.png" alt="Rocket" />
+        
       </div>
       <div className="brandSignature">AUTOMAÇÃO INTELIGENTE</div>
       <div className="navCaption">GESTOR OPERACIONAL</div>
@@ -52,7 +53,7 @@ function Sidebar() {
       </nav>
       <div className="sidebarFooter">
         <span className="dot" />
-        Modo demonstração
+        Rocket · Gestor
       </div>
     </aside>
   );
@@ -293,5 +294,6 @@ function AppShell() {
 export default function App() {
   return <AppShell />;
 }
+export { Sidebar, Dashboard, Matrix, Pricing, Accounts, Users, Placeholder };
 
 
