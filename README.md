@@ -73,9 +73,10 @@ No SQL Editor do projeto **gestor**, em um banco novo, execute **na ordem**:
 
 1. `supabase/migrations/001_initial_schema.sql`.
 2. `supabase/migrations/002_access_hardening.sql`.
-3. Opcionalmente `supabase/seed.sql`, somente para dados de demonstração.
+3. `supabase/migrations/003_ean_sku.sql`.
+4. Opcionalmente `supabase/seed.sql`, somente para dados de demonstração.
 
-As migrations são aplicadas uma vez. O seed pode ser repetido. Se a 001 já foi aplicada, execute somente a 002; não recrie tabelas. A 002 é transacional e falhará se já houver anúncios duplicados por produto/kit e conta; nesse caso revise os duplicados antes de reaplicar, sem apagar dados automaticamente.
+As migrations são aplicadas uma vez. O seed pode ser repetido. Se a 001 já foi aplicada, execute a 002 e depois a 003; não recrie tabelas. A 002 é transacional e falhará se já houver anúncios duplicados por produto/kit e conta; nesse caso revise os duplicados antes de reaplicar, sem apagar dados automaticamente.
 
 Depois crie o primeiro usuário em Authentication e atribua o perfil pelo SQL Editor:
 
@@ -108,7 +109,7 @@ Um endpoint futuro que use Service Role deverá validar o token do usuário, seu
 
 ## Testes e limites
 
-`npm test` aplica as duas migrations e o seed num PostgreSQL local em memória (PGlite), com papéis de autenticação simulados. Verifica estoque dos kits, seed repetível, isolamento por conta, usuários inativos, bloqueio anônimo, bloqueio de escrita e duplicidade de anúncios. PGlite usa `gen_random_uuid` nativo; a criação da extensão `pgcrypto` é omitida somente no teste. Isso não substitui validar a configuração de Auth e as migrations no projeto Supabase real.
+`npm test` aplica as três migrations e o seed num PostgreSQL local em memória (PGlite), com papéis de autenticação simulados. Verifica estoque dos kits, seed repetível, isolamento por conta, usuários inativos, bloqueio anônimo, bloqueio de escrita e duplicidade de anúncios. PGlite usa `gen_random_uuid` nativo; a criação da extensão `pgcrypto` é omitida somente no teste. Isso não substitui validar a configuração de Auth e as migrations no projeto Supabase real.
 
 ## Referências
 
@@ -120,3 +121,12 @@ Um endpoint futuro que use Service Role deverá validar o token do usuário, seu
 
 Paleta da marca: azul celeste #74B9FF, branco #FFFFFF, dourado #D4AF37 e azul noite #0B2D4A. Fonte Montserrat distribuída junto com o app, sem consulta externa ao Google Fonts. Símbolo vetorial recriado a partir da referência fornecida pelo proprietário; não é o arquivo vetorial original da marca. O canal próprio mantém o nome Ruta Direct Shop.
 
+
+## Regra de SKU
+
+- Produto unitário com EAN: SKU = EAN (texto, preservando zeros à esquerda).
+- Kit com um único produto na composição: SKU = EAN + `_x` + quantidade. Exemplo: `7790000000011_x2`.
+- Kit misto: mantém SKU próprio, como `KIT003`.
+- Produto sem EAN: mantém SKU manual como exceção até receber EAN.
+
+A migration 003 atualiza registros existentes mantendo os UUIDs e vínculos. Conflitos de SKU interrompem a migration sem excluir registros. Novos cadastros e alterações de EAN ou quantidade atualizam automaticamente os SKUs. A composição completa de um kit deve ser gravada em uma única transação: a regra é aplicada no commit para não confundir um kit misto parcialmente cadastrado com um kit de produto único. A V1 continua demonstrativa; estas regras estão preparadas para o futuro cadastro real.

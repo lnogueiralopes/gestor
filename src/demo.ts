@@ -23,15 +23,15 @@ export type ChannelCell = {
 };
 
 export const products: Product[] = [
-  { id: "p1", sku: "VIN001", name: "Catena Malbec 750ml", ean: "7790000000011", cost: 70, margin: 30, stock: 30 },
-  { id: "p2", sku: "VIN002", name: "Rutini Malbec 750ml", ean: "7790000000028", cost: 82, margin: 28, stock: 12 },
-  { id: "p3", sku: "VIN003", name: "Alamos Malbec 750ml", ean: "7790000000035", cost: 55, margin: 25, stock: 18 }
+  { id: "p1", sku: "7790000000011", name: "Catena Malbec 750ml", ean: "7790000000011", cost: 70, margin: 30, stock: 30 },
+  { id: "p2", sku: "7790000000028", name: "Rutini Malbec 750ml", ean: "7790000000028", cost: 82, margin: 28, stock: 12 },
+  { id: "p3", sku: "7790000000035", name: "Alamos Malbec 750ml", ean: "7790000000035", cost: 55, margin: 25, stock: 18 }
 ];
 
 export const kits: Kit[] = [
-  { id: "k1", sku: "KIT001", name: "Kit 2 Catena Malbec", components: "2× VIN001", units: 2, available: 15 },
-  { id: "k2", sku: "KIT002", name: "Kit 3 Catena Malbec", components: "3× VIN001", units: 3, available: 10 },
-  { id: "k3", sku: "KIT003", name: "Trio Argentina", components: "VIN001 + VIN002 + VIN003", units: 3, available: 12 }
+  { id: "k1", sku: "7790000000011_x2", name: "Kit 2 Catena Malbec", components: "2× 7790000000011", units: 2, available: 15 },
+  { id: "k2", sku: "7790000000011_x3", name: "Kit 3 Catena Malbec", components: "3× 7790000000011", units: 3, available: 10 },
+  { id: "k3", sku: "KIT003", name: "Trio Argentina", components: "7790000000011 + 7790000000028 + 7790000000035", units: 3, available: 12 }
 ];
 
 export const accounts = [
