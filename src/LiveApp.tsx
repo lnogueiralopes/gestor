@@ -52,6 +52,7 @@ export default function LiveApp() {
       <label>Usuário<input style={{display:'block',width:'100%',margin:'8px 0 16px'}} type="text" autoComplete="username" required value={login} onChange={e=>setLogin(e.target.value)} /></label>
       <label>Senha<input style={{display:'block',width:'100%',margin:'8px 0 16px'}} type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} /></label>
       <button className="primary" disabled={busy}>{busy?'Entrando…':'Entrar'}</button>
+      <a className="loginContact" href="https://wa.me/5516981035244" target="_blank" rel="noopener noreferrer" aria-label="Fale conosco pelo WhatsApp (abre em nova aba)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.5 11.7a8.6 8.6 0 0 1-12.8 7.5L3 20.5l1.3-4.6a8.6 8.6 0 1 1 16.2-4.2Z"/><path d="m8 7 1.5-.3 1.2 2.7-1 1.1c.8 1.6 1.7 2.5 3.3 3.2l1.1-1 2.6 1.3-.3 1.5c-.3 1.4-2.3 1.6-4.6.4-2.4-1.2-4.8-3.6-5.1-6C6.5 8.4 7.1 7.4 8 7Z"/></svg><span>Fale conosco</span></a>
       <p role="status">{message}</p>
     </form>
   </main></div>;

@@ -1,5 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600&display=swap');
 
+input:not([type=checkbox]):not([type=radio]),textarea,select,
+.rocketLoginPage input,.rocketWorkspace input[aria-label="Buscar produtos"]{
+  background:#ecefe8;border-color:#cbd4c2;color:#30352d;
+}
+input::placeholder,textarea::placeholder{color:#66715e;opacity:1}
+.rocketLoginPage input:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #82ad31;outline-offset:2px}
+.loginContact{display:flex;align-items:center;justify-content:center;gap:7px;margin:16px auto 0;padding:6px;width:fit-content;color:#aebba4;text-decoration:none;font-size:11px;font-weight:400}
+.loginContact:hover{color:#c1ef63;text-decoration:underline}
+.loginContact:focus-visible{outline:2px solid #b8ee20;outline-offset:3px;border-radius:4px}
+
 /* Display typography stays separate from data and editable values. */
 h1,h2,h3,button{text-transform:uppercase}
 .rocketLoginIntro h2{text-transform:none}
