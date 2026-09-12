@@ -45,7 +45,7 @@ export default function LiveApp() {
   }, [session?.user.id]);
   if (!ready) return <main className="card">Carregando…</main>;
   if (!supabase) return <main className="card">A conexão com o catálogo está sendo configurada.</main>;
-  if (!session) return <div className="rocketLoginPage"><section className="rocketLoginIntro"><span className="loginEyebrow">GESTÃO E AUTOMAÇÃO</span><h2>Sua operação.<br/><em>Um só lugar.</em></h2><p>Produtos, kits e canais de venda organizados para o próximo passo.</p><div className="loginTags"><span>Catálogo</span><span>Controle</span><span>Conexões</span></div></section><main className="card rocketLogin">
+  if (!session) return <div className="rocketLoginPage"><section className="rocketLoginIntro"><span className="loginEyebrow">GESTÃO E AUTOMAÇÃO</span><h2>Sua operação.<br/><em>Um só lugar.</em></h2></section><main className="card rocketLogin">
     <div className="rocketLogoPanel"><img src="/brand/rocket-ia-logo.png" alt="Rocket" /></div>
     <h1>Acesse sua conta</h1>
     <form onSubmit={async e => { e.preventDefault(); setBusy(true); setMessage(''); try { if (!login.includes('@')) { setMessage('O login por usuário curto será ativado na próxima atualização. Use o e-mail cadastrado por enquanto.'); setBusy(false); return; } const {error} = await supabase!.auth.signInWithPassword({email:login.trim(),password}); if(error) setMessage('Não foi possível entrar. Confira seu usuário e senha.'); else setPassword(''); } catch { setMessage('Falha de conexão. Tente novamente.'); } finally {setBusy(false);} }}>
