@@ -1,3 +1,4 @@
+import ImageField from './ImageField';
 import ProductImages from './ProductImages';
 import AccountSettings from './AccountSettings';
 import { useEffect, useState, type FormEvent } from 'react';
@@ -72,13 +73,14 @@ export default function LiveApp() {
       {Object.entries({id_produto:'ID Produto',ean:'EAN',sku:'SKU (igual ao EAN)',name:'Nome',short_title:'Título curto',brand:'Marca',origin:'Origem',winery:'Vinícola',vintage:'Safra',size:'Volume / tamanho',varietal:'Variedade',product_type:'Tipo',unit_cost:'Custo unitário',target_margin:'Margem alvo',stock_on_hand:'Estoque',summary:'Resumo',description:'Descrição'}).map(([key,label])=>{
         const k=key as Exclude<keyof typeof form,'is_active'>;
         const numeric=['unit_cost','target_margin','stock_on_hand'].includes(key);
-        return <label key={key} className={['summary','description'].includes(key)?'wideField':''}>{label}{['summary','description'].includes(key)?<textarea rows={key==='description'?5:3} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>:<input type={numeric?'number':'text'} min={numeric?0:undefined} step={key==='stock_on_hand'?1:key==='target_margin'?'0.0001':'0.01'} required={['name'].includes(key)} readOnly={['id_produto','sku'].includes(key)||key==='ean'&&Boolean(editing)} placeholder={key==='id_produto'?'Automático':undefined} value={key==='sku'?form.ean:form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>}</label>;
+        return <label key={key} className={['summary','description'].includes(key)?'wideField':''}>{label}{['summary','description'].includes(key)?<textarea rows={key==='description'?3:2} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>:<input type={numeric?'number':'text'} min={numeric?0:undefined} step={key==='stock_on_hand'?1:key==='target_margin'?'0.0001':'0.01'} required={['name'].includes(key)} readOnly={['id_produto','sku'].includes(key)||key==='ean'&&Boolean(editing)} placeholder={key==='id_produto'?'Automático':undefined} value={key==='sku'?form.ean:form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>}</label>;
       })}
       <label className="wideField"><input type="checkbox" checked={form.is_active} onChange={e=>setForm({...form,is_active:e.target.checked})}/> Produto ativo</label>
-      </div><h3>Imagens</h3><div className="formGrid">{imageFields.map((url,i)=><label key={i}>Imagem {i+1}<input value={url} placeholder="/images/EAN_1.jpg" onChange={e=>setImageFields(current=>current.map((v,n)=>n===i?e.target.value:v))}/></label>)}</div>
+      </div><h3>Imagens</h3><div className="imageFields">{imageFields.map((url,i)=><ImageField key={i} url={url} index={i} onChange={value=>setImageFields(current=>current.map((v,n)=>n===i?value:v))}/>)}</div>
+      <p role="status">{message}</p>
       <div className="formActions"><button className="primary" disabled={busy}>{busy?'Salvando…':'Salvar produto'}</button><button type="button" disabled={busy} onClick={()=>setFormOpen(false)}>Cancelar</button></div>
     </form>}
-    <p className="muted">Cadastre produtos, edite os detalhes e organize as imagens do catálogo.</p>
+    {!formOpen && <>
     <input aria-label="Buscar produtos" placeholder="Buscar EAN ou dados do produto" value={search} onChange={e=>setSearch(e.target.value)} />
     <p role="status">{busy?'Carregando catálogo…':message}</p>
     <div className="catalogFilters">{columns.map(([key,label])=><label key={key}>{label}<select value={filters[key]??''} onChange={e=>setFilters({...filters,[key]:e.target.value})}><option value="">Todos</option>{Array.from(new Set(rows.map(p=>String(p[key]??'')).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'pt-BR',{numeric:true})).map(value=><option key={value} value={value}>{value}</option>)}</select></label>)}<button type="button" onClick={()=>{setFilters({});setSearch('');}}>Limpar filtros</button></div>
@@ -87,5 +89,6 @@ export default function LiveApp() {
       {visible.map(p=><tr key={p.id}><td>{p.ean}</td>{columns.map(([key])=><td key={key}>{String(p[key]??'')||'—'}</td>)}<td>{p.vintage || '—'}</td><td><ProductImages product={p}/></td><td><button onClick={()=>openForm(p)}>Editar</button></td></tr>)}
     </tbody></table></div>
     {!busy && !message && !visible.length && <p>Nenhum produto encontrado.</p>}
+    </>}
   </main></div>;
 }
