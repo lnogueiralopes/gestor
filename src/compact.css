@@ -1,6 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600&display=swap');
 
 /* Display typography stays separate from data and editable values. */
+h1,h2,h3,button{text-transform:uppercase}
+.rocketLoginIntro h2{text-transform:none}
+.loginRSymbol{display:block;width:160px;height:120px;background:url('/brand/rocket-ia-logo.png') -97px -42px / 356px 269px no-repeat;mix-blend-mode:screen;margin-bottom:24px}
+.rocketLoginPage .rocketLogoPanel{margin:8px auto 28px}
+.loginWordmark{display:block;width:210px;height:38px;margin:auto;background:url('/brand/rocket-ia-logo.png') -64px -172px / 341px 258px no-repeat;mix-blend-mode:screen}
+@media(max-height:600px){.loginRSymbol{margin-bottom:12px}.rocketLoginPage .rocketLogoPanel{margin:4px auto 18px}}
 .topNavigation button,.topNavigation a,.primary,.pageHeader h1,.rocketLogin h1{
   font-family:'Orbitron',Montserrat,sans-serif;
   letter-spacing:.02em;

@@ -45,9 +45,9 @@ export default function LiveApp() {
   }, [session?.user.id]);
   if (!ready) return <main className="card">Carregando…</main>;
   if (!supabase) return <main className="card">A conexão com o catálogo está sendo configurada.</main>;
-  if (!session) return <div className="rocketLoginPage"><section className="rocketLoginIntro"><span className="loginEyebrow">GESTÃO E AUTOMAÇÃO</span><h2>Sua operação.<br/><em>Um só lugar.</em></h2></section><main className="card rocketLogin">
-    <div className="rocketLogoPanel"><img src="/brand/rocket-ia-logo.png" alt="Rocket" /></div>
-    <h1>Acesse sua conta</h1>
+  if (!session) return <div className="rocketLoginPage"><section className="rocketLoginIntro"><span className="loginRSymbol" role="img" aria-label="Símbolo Rocket" /><h2>Sua operação.<br/><em>Um só lugar.</em></h2></section><main className="card rocketLogin">
+    <div className="rocketLogoPanel"><span className="loginWordmark" role="img" aria-label="Rocket" /></div>
+    
     <form onSubmit={async e => { e.preventDefault(); setBusy(true); setMessage(''); try { if (!login.includes('@')) { setMessage('O login por usuário curto será ativado na próxima atualização. Use o e-mail cadastrado por enquanto.'); setBusy(false); return; } const {error} = await supabase!.auth.signInWithPassword({email:login.trim(),password}); if(error) setMessage('Não foi possível entrar. Confira seu usuário e senha.'); else setPassword(''); } catch { setMessage('Falha de conexão. Tente novamente.'); } finally {setBusy(false);} }}>
       <label>Usuário<input style={{display:'block',width:'100%',margin:'8px 0 16px'}} type="text" autoComplete="username" required value={login} onChange={e=>setLogin(e.target.value)} /></label>
       <label>Senha<input style={{display:'block',width:'100%',margin:'8px 0 16px'}} type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} /></label>
