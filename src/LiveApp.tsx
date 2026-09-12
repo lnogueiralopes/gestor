@@ -1,3 +1,4 @@
+import ProductImages from './ProductImages';
 import AccountSettings from './AccountSettings';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useLocation, Navigate } from 'react-router-dom';
@@ -76,8 +77,8 @@ export default function LiveApp() {
     <p className="muted">Cadastre produtos, edite os detalhes e organize as imagens do catálogo.</p>
     <input aria-label="Buscar produtos" placeholder="Buscar nome, EAN ou marca" value={search} onChange={e=>setSearch(e.target.value)} />
     <p role="status">{busy?'Carregando catálogo…':message}</p>
-    <div className="card tableWrap"><table><thead><tr><th>EAN / SKU</th><th>Produto</th><th>Marca</th><th>Safra</th>{[1,2,3,4,5,6].map(i=><th key={i}>Imagem {i}</th>)}<th>Ações</th></tr></thead><tbody>
-      {visible.map(p=><tr key={p.id}><td>{p.ean}</td><td>{p.name}</td><td>{p.brand}</td><td>{p.vintage || '—'}</td>{[1,2,3,4,5,6].map(i=>{const raw=p[`image_${i}_url`]; const url=typeof raw==='string'?raw.replace(/^\/image\//,'/images/'):''; return <td key={i}>{url && (url.startsWith('/images/') || url.startsWith('https://')) ? <a href={url} target="_blank" rel="noreferrer"><img src={url} loading="lazy" width="64" height="80" style={{objectFit:'contain'}} alt={`${p.name}, imagem ${i}`} /></a>:'—'}</td>;})}<td><button onClick={()=>openForm(p)}>Editar</button></td></tr>)}
+    <div className="card tableWrap"><table><thead><tr><th>EAN / SKU</th><th>Produto</th><th>Marca</th><th>Safra</th><th>Imagens</th><th>Ações</th></tr></thead><tbody>
+      {visible.map(p=><tr key={p.id}><td>{p.ean}</td><td>{p.name}</td><td>{p.brand}</td><td>{p.vintage || '—'}</td><td><ProductImages product={p}/></td><td><button onClick={()=>openForm(p)}>Editar</button></td></tr>)}
     </tbody></table></div>
     {!busy && !message && !visible.length && <p>Nenhum produto encontrado.</p>}
   </main></div>;
