@@ -40,13 +40,10 @@ function NavIcon({ path }: { path: string }) {
   return <svg className="navIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[path]} /></svg>;
 }
 
-function PageHeader({ title, subtitle, action }: { title: string; subtitle: string; action?: string }) {
+function PageHeader({ action }: { title: string; subtitle: string; action?: string }) {
   return (
-    <div className="pageHeader">
-      <div>
-        <h1>{title}</h1>
-        <p>{subtitle}</p>
-      </div>
+    <div className="pageHeader" hidden={!action}>
+
       {action && <div className="actionPanel"><button className="roundAction addAction" disabled title={`${action} — em preparação`} aria-label={action}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>}
     </div>
   );

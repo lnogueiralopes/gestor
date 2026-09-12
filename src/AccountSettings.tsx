@@ -8,6 +8,7 @@ export default function AccountSettings() {
   const [message, setMessage] = useState('');
   async function save(event: FormEvent) {
     event.preventDefault();
+    if (password.length < 12) { setMessage('A senha deve ter pelo menos 12 caracteres.'); return; }
     if (password !== confirmation) { setMessage('As senhas precisam ser iguais.'); return; }
     setBusy(true); setMessage('');
     try {
@@ -17,11 +18,10 @@ export default function AccountSettings() {
     } catch { setMessage('Falha de conexão. Tente novamente.'); }
     finally { setBusy(false); }
   }
-  return <><header className="pageHeader"><div><h1>Minha conta</h1><p>Gerencie a senha de acesso ao Rocket.</p></div></header>
-    <form className="card productForm" onSubmit={save} style={{maxWidth:600}}>
-      <h2>Alterar minha senha</h2><p>Use pelo menos 12 caracteres.</p>
-      <label>Nova senha<input type="password" autoComplete="new-password" required minLength={12} value={password} disabled={busy} onChange={e=>setPassword(e.target.value)} /></label>
-      <label>Confirmar nova senha<input type="password" autoComplete="new-password" required minLength={12} value={confirmation} disabled={busy} onChange={e=>setConfirmation(e.target.value)} /></label>
+  return <>
+    <form className="card productForm passwordForm" aria-label="Alterar minha senha" onSubmit={save} style={{maxWidth:420}}>
+      <label>Nova senha<input type="password" autoComplete="new-password" required value={password} disabled={busy} onChange={e=>setPassword(e.target.value)} /></label>
+      <label>Confirmar nova senha<input type="password" autoComplete="new-password" required value={confirmation} disabled={busy} onChange={e=>setConfirmation(e.target.value)} /></label>
       <div className="formActions"><button className="primary" disabled={busy}>{busy?'Salvando…':'Alterar senha'}</button></div>
       <p role="status">{message}</p>
     </form></>;
