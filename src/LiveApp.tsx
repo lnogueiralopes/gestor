@@ -1,3 +1,4 @@
+import ActionPanel from './ActionPanel';
 import ImageField from './ImageField';
 import ProductImages from './ProductImages';
 import AccountSettings from './AccountSettings';
@@ -66,7 +67,7 @@ export default function LiveApp() {
   const modules: Record<string, React.ReactNode> = {"/estoque/cadastro":<Placeholder title="Cadastro de estoque" description="Identificação dos estoques por ID_Estoque. Em preparação." />, "/estoque/movimentacoes":<Placeholder title="Movimentações de estoque" description="Entradas, saídas e transferências. Em preparação." />, "/estoque/inventario":<Placeholder title="Inventário" description="Contagem e conferência de estoque. Em preparação." />,"/minha-conta":<AccountSettings />,"/dashboard":<Dashboard />, "/kits":<Matrix kind="kits" />, "/precificador":<Pricing />, "/contas":<Accounts />, "/usuarios":<Users />, "/anuncios":<Placeholder title="Anúncios" description="Integração com canais em preparação." />, "/pedidos":<Placeholder title="Pedidos" description="Sincronização em preparação." />, "/configuracoes":<Placeholder title="Configurações" description="Configurações em preparação." />, "/automacoes":<Placeholder title="Automações" description="Agendamentos em preparação." />};
   if(location.pathname !== "/" && location.pathname !== "/produtos") return <div className="app"><Sidebar /><main className="content rocketWorkspace">{location.pathname !== "/minha-conta" && <p className="demoNotice">Este módulo ainda é demonstrativo. O catálogo real está em Produtos.</p>}{modules[location.pathname] ?? <Navigate to="/produtos" replace />}</main></div>;
   return <div className="app"><Sidebar /><main className="rocketWorkspace">
-    <header className="pageHeader"><div><h1>Produtos</h1><p>{rows.length} produtos no catálogo</p></div><div><button className="primary" onClick={()=>openForm()}>Novo produto</button></div></header>
+    <header className="pageHeader"><div><h1>Produtos</h1><p>{rows.length} produtos no catálogo</p></div><ActionPanel onAdd={()=>openForm()} addLabel="Novo produto" search={search} onSearch={formOpen?undefined:setSearch}/></header>
     {formOpen && <form className="card productForm" onSubmit={saveProduct}>
       <h2>{editing?'Editar produto':'Novo produto'}</h2>
       <div className="formGrid">
@@ -81,7 +82,7 @@ export default function LiveApp() {
       <div className="formActions"><button className="primary" disabled={busy}>{busy?'Salvando…':'Salvar produto'}</button><button type="button" disabled={busy} onClick={()=>setFormOpen(false)}>Cancelar</button></div>
     </form>}
     {!formOpen && <>
-    <input aria-label="Buscar produtos" placeholder="Buscar EAN ou dados do produto" value={search} onChange={e=>setSearch(e.target.value)} />
+
     <p role="status">{busy?'Carregando catálogo…':message}</p>
 
     <p className="muted">{visible.length} de {rows.length} produtos</p>

@@ -47,7 +47,7 @@ function PageHeader({ title, subtitle, action }: { title: string; subtitle: stri
         <h1>{title}</h1>
         <p>{subtitle}</p>
       </div>
-      {action && <button className="primary" disabled title="Disponível após implementar a integração">{action}</button>}
+      {action && <div className="actionPanel"><button className="roundAction addAction" disabled title={`${action} — em preparação`} aria-label={action}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>}
     </div>
   );
 }
