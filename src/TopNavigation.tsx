@@ -26,7 +26,7 @@ export default function TopNavigation() {
         </button><div className="navDropdown" id={`nav-group-${index}`} hidden={!expanded}>{group.items.map(([path,label])=><NavLink key={path} to={path} onClick={()=>setOpen(null)}>{label}{path.startsWith('/estoque/')&&<small>Em preparação</small>}</NavLink>)}</div>
       </div>;})}
     </nav>
-    <NavLink to="/minha-conta" className="accountCircle" aria-label="Minha conta" title="Minha conta"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg></NavLink>
+    <NavLink to="/minha-conta" className="accountCircle" aria-label="Minha conta" title="Minha conta"><svg width="21" height="21" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2C6.4 2 3 5.4 3 10c0 5.3 5.9 12 9 12s9-6.7 9-12c0-4.6-3.4-8-9-8Z"/><path fill="#b8ee20" d="M6 9c3 0 4.7 1.8 5 4.5C8 13.5 6.3 12 6 9Zm12 0c-.3 3-2 4.5-5 4.5.3-2.7 2-4.5 5-4.5Z"/></svg></NavLink>
   </header>;
 }
 
