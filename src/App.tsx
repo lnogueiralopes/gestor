@@ -1,3 +1,4 @@
+import TopNavigation from './TopNavigation';
 import { useState } from "react";
 import { Routes, Route, NavLink, Navigate } from "react-router-dom";
 import { accounts, kits, kitMatrix, kitRules, pricingParameters, products, productMatrix, type ChannelCell } from "./demo";
@@ -22,43 +23,7 @@ function StatusBadge({ cell }: { cell: ChannelCell }) {
   );
 }
 
-function Sidebar() {
-  const links = [
-    ["/dashboard", "Dashboard"],
-    ["/produtos", "Produtos"],
-    ["/kits", "Kits"],
-    ["/precificador", "Precificador"],
-    ["/anuncios", "Anúncios"],
-    ["/pedidos", "Pedidos"],
-    ["/contas", "Contas"],
-    ["/usuarios", "Usuários"],
-    ["/minha-conta", "Minha conta"],
-    ["/configuracoes", "Configurações"],
-    ["/automacoes", "Automações"],
-  ];
-
-  return (
-    <aside className="sidebar">
-      <div className="brand" aria-label="Rocket">
-        <img className="brandMark rocketLogo" src="/brand/rocket-ia-logo.png" alt="Rocket" />
-        
-      </div>
-      <div className="brandSignature">AUTOMAÇÃO INTELIGENTE</div>
-      <div className="navCaption">GESTOR OPERACIONAL</div>
-      <nav>
-        {links.map(([to, label]) => (
-          <NavLink key={to} to={to} end={to === "/"}>
-            <NavIcon path={to} /><span>{label}</span>
-          </NavLink>
-        ))}
-      </nav>
-      <div className="sidebarFooter">
-        <span className="dot" />
-        Rocket · Gestor
-      </div>
-    </aside>
-  );
-}
+function Sidebar() { return <TopNavigation />; }
 
 function NavIcon({ path }: { path: string }) {
   const paths: Record<string, string> = {
