@@ -32,6 +32,7 @@ function Sidebar() {
     ["/pedidos", "Pedidos"],
     ["/contas", "Contas"],
     ["/usuarios", "Usuários"],
+    ["/minha-conta", "Minha conta"],
     ["/configuracoes", "Configurações"],
     ["/automacoes", "Automações"],
   ];
