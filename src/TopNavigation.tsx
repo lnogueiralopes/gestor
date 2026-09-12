@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 
 const groups = [
   {label:'Produtos',items:[['/produtos','Cadastro de produtos'],['/kits','Cadastro de Kits']]},
-  {label:'Canais de venda',items:[['/precificador','Precificador'],['/anuncios','Anúncios'],['/contas','Contas']]},
+  {label:'Canais de venda',items:[['/precificador','Precificador'],['/anuncios','Anúncios'],['/contas','Marketplace']]},
   {label:'Vendas',items:[['/pedidos','Pedidos']]},
   {label:'Estoque',items:[['/estoque/cadastro','Cadastro de estoque'],['/estoque/movimentacoes','Movimentações'],['/estoque/inventario','Inventário']]},
   {label:'Automação',items:[['/automacoes','Agendamentos']]},
@@ -29,3 +29,4 @@ export default function TopNavigation() {
     <NavLink to="/minha-conta" className="accountCircle" aria-label="Minha conta" title="Minha conta"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/></svg></NavLink>
   </header>;
 }
+
