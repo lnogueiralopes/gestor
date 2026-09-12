@@ -32,4 +32,4 @@ table,input,textarea,select{font-family:Montserrat,Arial,sans-serif;font-variant
 .rocketLoginPage .rocketLogin form{margin:0}
 @media(max-width:800px){.rocketLoginPage{grid-template-columns:1fr;padding:18px}.rocketLoginPage .rocketLogin{padding:22px;max-width:330px}}
 @media(max-height:600px){.rocketLoginPage{padding-top:12px;padding-bottom:12px}.rocketLoginPage .rocketLogin{padding:16px 24px}.rocketLoginPage .rocketLogoPanel img{width:72px}.rocketLoginPage .rocketLogin h1{margin:10px 0 12px;font-size:16px}.rocketLoginPage input{min-height:34px;margin:4px 0 9px!important}}
-
+.topNavigation>.accountCircle{margin-left:auto}@media(max-width:850px){.topNavigation>.rocketWordmark{order:0}.topNavigation>.accountCircle{order:1}.topNavigation>.topLinks{order:2}}
