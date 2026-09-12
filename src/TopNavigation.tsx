@@ -1,3 +1,4 @@
+import { supabase } from './lib/supabase';
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 
@@ -10,6 +11,8 @@ const groups = [
   {label:'Sistema',items:[['/usuarios','Usuários'],['/configuracoes','Configurações']]},
 ];
 export default function TopNavigation() {
+  const [signingOut,setSigningOut]=useState(false);
+  const [exitError,setExitError]=useState('');
   const [open,setOpen]=useState<string|null>(null);
   const root=useRef<HTMLElement>(null);
   const location=useLocation();
@@ -26,7 +29,7 @@ export default function TopNavigation() {
         </button><div className="navDropdown" id={`nav-group-${index}`} hidden={!expanded}>{group.items.map(([path,label])=><NavLink key={path} to={path} onClick={()=>setOpen(null)}>{label}{path.startsWith('/estoque/')&&<small>Em preparação</small>}</NavLink>)}</div>
       </div>;})}
     </nav>
-    <NavLink to="/minha-conta" className="accountCircle" aria-label="Minha conta" title="Minha conta"><svg width="21" height="21" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2C6.4 2 3 5.4 3 10c0 5.3 5.9 12 9 12s9-6.7 9-12c0-4.6-3.4-8-9-8Z"/><path fill="#b8ee20" d="M6 9c3 0 4.7 1.8 5 4.5C8 13.5 6.3 12 6 9Zm12 0c-.3 3-2 4.5-5 4.5.3-2.7 2-4.5 5-4.5Z"/></svg></NavLink>
+    <NavLink to="/minha-conta" className="accountCircle" aria-label="Minha conta" title="Minha conta"><svg width="21" height="21" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2C5 2 2 5 3 10c.5 3 3 5 5 7l4 5 4-5c2-2 4.5-4 5-7 1-5-2-8-9-8Z"/><path fill="#b8ee20" d="M5.5 8.5c3-.5 5 1.5 5 4.5-3.5 0-5-1.5-5-4.5Zm13 0c0 3-1.5 4.5-5 4.5 0-3 2-5 5-4.5ZM10 17h4v1h-4Z"/></svg></NavLink>
+    <button className="signOutIcon" type="button" title="Sair" aria-label="Sair da conta" disabled={signingOut} onClick={async()=>{setSigningOut(true);setExitError('');try{const result=await supabase!.auth.signOut();if(result.error)setExitError('Não foi possível sair. Tente novamente.');}catch{setExitError('Falha de conexão ao sair.');}finally{setSigningOut(false);}}}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M10 4H4v16h6M14 7l5 5-5 5M8 12h11"/></svg></button>{exitError&&<span className="exitError" role="alert">{exitError}</span>}
   </header>;
 }
-
