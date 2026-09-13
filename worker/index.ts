@@ -1,3 +1,4 @@
+import { listUsers } from './users';
 import { mercadoLivre } from './mercadolivre';
 export interface Env {
   APP_ENV: string;
@@ -21,6 +22,7 @@ const json = (data: unknown, status = 200) =>
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname === '/api/admin/users') return listUsers(request, env);
     if (url.pathname.startsWith('/api/marketplaces/mercadolivre/')) return mercadoLivre(request, env);
 
     if (url.pathname === "/api/health") {
