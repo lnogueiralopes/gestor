@@ -183,7 +183,7 @@ function Pricing() {
     if (!rows.length) { setCostDownloadMessage('Nenhum produto encontrado para esta família.'); return; }
     const headers = ['EAN','SKU','Produto','Família','Custo atual','Margem atual (%)','Novo custo','Nova margem (%)'];
     const familyName = (id:any) => ({1:'Bebidas',2:'Suplementos',3:'Fertilizantes'} as any)[Number(id)] || '';
-    const csv = [headers,...rows.map((p:any)=>[p.ean||'',p.sku||p.ean||'',p.name||'',familyName(p.family_id),p.unit_cost??p.cost??'',p.target_margin??p.margin??'','',''])].map(row=>row.map((v:any)=>String(v).replace(/\t|\r?\n/g,' ')).join('\t')).join('\r\n');
+    const csv = [headers,...rows.map((p:any)=>[`="${p.ean||''}"`,`="${p.sku||p.ean||''}"`,p.name||'',familyName(p.family_id),p.unit_cost??p.cost??'',p.target_margin??p.margin??'','',''])].map(row=>row.map((v:any)=>String(v).replace(/\t|\r?\n/g,' ')).join('\t')).join('\r\n');
     const blob = new Blob(['\ufeff'+csv], {type:'application/vnd.ms-excel'});
     const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href=url; link.download=`modelo-atualizacao-custos-${costFamily.toLowerCase().replace(/\s+/g,'-')}.xls`; link.style.display='none'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); setCostDownloadMessage(`${rows.length} produto(s) incluído(s) na planilha.`);
   };
