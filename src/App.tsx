@@ -137,6 +137,7 @@ function Pricing() {
   const [showAssumptions, setShowAssumptions] = useState(false);
   const [showKitRules, setShowKitRules] = useState(false);
   const [costFile, setCostFile] = useState('');
+  const [costFamily, setCostFamily] = useState('Todas');
   const [accountTables, setAccountTables] = useState(() => Object.fromEntries(accounts.map(account => [account.id, account.priceTable])));
   const tableFor = (account: typeof accounts[number]) => priceTables.filter(table => table.channel === account.channel);
 
@@ -158,7 +159,7 @@ function Pricing() {
       <PageHeader title="Precificador" subtitle="Margens por produto, premissas e regras editáveis para kits." action="Recalcular preços" />
       <div className="card spreadsheetActions">
         <div><h3>Atualizar custos por planilha</h3><p className="muted">Baixe o modelo, edite apenas o novo custo usando o EAN como chave e selecione o arquivo para validação.</p></div>
-        <div className="spreadsheetButtons"><a className="primary" href="/modelo-atualizacao-custos.xlsx" download>Baixar modelo Excel</a><label className="fileButton"><span>Selecionar planilha</span><input type="file" accept=".xlsx,.xls,.csv" onChange={e=>setCostFile(e.target.files?.[0]?.name||'')} /></label></div>
+        <div className="spreadsheetButtons"><label className="familySelect">Família<select value={costFamily} onChange={e=>setCostFamily(e.target.value)}><option>Todas</option><option>Bebidas</option><option>Suplementos</option><option>Fertilizantes</option></select></label><a className="primary" href={`/modelo-atualizacao-custos.xlsx?family=${encodeURIComponent(costFamily)}`} download>Baixar modelo Excel</a><label className="fileButton"><span>Selecionar planilha</span><input type="file" accept=".xlsx,.xls,.csv" onChange={e=>setCostFile(e.target.files?.[0]?.name||'')} /></label></div>
         {costFile&&<p className="fileSelected" role="status">Arquivo selecionado: {costFile}. O processamento será feito após a validação por EAN.</p>}
       </div>
       <div className="pricingEditorButtons"><button type="button" className="secondary" onClick={() => setShowAssumptions(value => !value)}>{showAssumptions ? 'Ocultar premissas' : 'Editar premissas'}</button><button type="button" className="secondary" onClick={() => setShowKitRules(value => !value)}>{showKitRules ? 'Ocultar regras de kits' : 'Editar regras de kits'}</button></div>
