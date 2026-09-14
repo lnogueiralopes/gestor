@@ -141,7 +141,9 @@ function Pricing() {
   const [costFile, setCostFile] = useState('');
   const [costFamily, setCostFamily] = useState('Todas');
   const [accountTables, setAccountTables] = useState(() => Object.fromEntries(accounts.map(account => [account.id, account.priceTable])));
-  const section = location.pathname === '/precificador/tabelas-conta' ? 'accounts' : location.pathname === '/precificador/tabelas-preco' ? 'tables' : location.pathname === '/precificador/parametros' ? 'params' : location.pathname === '/precificador/custos' ? 'costs' : 'log';
+  const [matrixRows,setMatrixRows]=useState<any[]>([]);
+  useEffect(()=>{if(supabase)supabase.from('pricing_product_matrix').select('*').order('name').then(({data})=>{if(data)setMatrixRows(data);});},[]);
+  const section = location.pathname === '/precificador/tabelas-conta' ? 'accounts' : location.pathname === '/precificador/tabelas-preco' ? 'tables' : location.pathname === '/precificador/parametros' ? 'params' : location.pathname === '/precificador/custos' ? 'costs' : location.pathname === '/precificador/matriz' ? 'matrix' : 'log';
   const [logPeriod, setLogPeriod] = useState('7');
   const tableFor = (account: typeof accounts[number]) => priceTables.filter(table => table.channel === account.channel && (account.channel !== 'Mercado Livre' || ['Preço Clássico','Clássico + 10% campanha'].includes(table.name)));
 
@@ -162,7 +164,7 @@ function Pricing() {
     <>
       <PageHeader title="Precificador" subtitle="Margens por produto, premissas e regras editáveis para kits." />
       <div className="pricingMenu" aria-label="Seções do precificador">
-        {([['log','Log'],['accounts','Tabelas por conta'],['tables','Tabelas de preço'],['params','Parâmetros'],['costs','Custos de produtos']] as const).map(([id,label])=><button key={id} type="button" className={`roundAction ${section===id?'addAction':''}`} title={label} aria-label={label} onClick={()=>navigate({'log':'/precificador','accounts':'/precificador/tabelas-conta','tables':'/precificador/tabelas-preco','params':'/precificador/parametros','costs':'/precificador/custos'}[id])}>{id==='log'?'≡':id==='accounts'?'◎':id==='tables'?'▤':id==='params'?'⚙':'⇩'}</button>)}
+        {([['log','Log'],['accounts','Tabelas por conta'],['tables','Tabelas de preço'],['matrix','Matriz de preços'],['params','Parâmetros'],['costs','Custos de produtos']] as const).map(([id,label])=><button key={id} type="button" className={`roundAction ${section===id?'addAction':''}`} title={label} aria-label={label} onClick={()=>navigate({log:'/precificador',accounts:'/precificador/tabelas-conta',tables:'/precificador/tabelas-preco',matrix:'/precificador/matriz',params:'/precificador/parametros',costs:'/precificador/custos'}[id])}>{id==='log'?'≡':id==='accounts'?'◎':id==='tables'?'▤':id==='matrix'?'▦':id==='params'?'⚙':'⇩'}</button>)}
       </div>
       {section==='log' && <div className="card tableWrap"><div className="sectionHeading"><label className="logPeriod">Período<select value={logPeriod} onChange={e=>setLogPeriod(e.target.value)}><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="all">Todo o histórico</option></select></label></div><table><thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Detalhes</th></tr></thead><tbody><tr><td>—</td><td>—</td><td>Nenhuma alteração registrada</td><td>Os próximos uploads e cadastros aparecerão aqui.</td></tr></tbody></table></div>}
       {section==='costs' && <div className="card spreadsheetActions">
