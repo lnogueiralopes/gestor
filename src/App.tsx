@@ -184,7 +184,6 @@ function Pricing() {
     const csv = [headers,...rows.map((p:any)=>[p.ean||'',p.sku||p.ean||'',p.name||'',familyName(p.family_id),p.unit_cost??p.cost??'',p.target_margin??p.margin??'','',''])].map(row=>row.map((v:any)=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
     const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'});
     const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href=url; link.download=`modelo-atualizacao-custos-${costFamily.toLowerCase().replace(/\s+/g,'-')}.csv`; link.style.display='none'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); setCostDownloadMessage(`${rows.length} produto(s) incluído(s) na planilha.`);
-    await recordPricingLog('Download de planilha de custos', rows.length, {family:costFamily,count:rows.length,fields:headers});
   };
   const processCostFile = (file?: File) => {
     if (!file) return;
@@ -194,10 +193,10 @@ function Pricing() {
     reader.onload = () => {
       setUploadProgress(60); setUploadStatus('Validando colunas EAN, custo e margem…');
       window.setTimeout(()=>{setUploadProgress(82);setUploadStatus('Conferindo os EANs com o cadastro de produtos…');},500);
-      window.setTimeout(async()=>{setUploadProgress(100);setUploadStatus('Processamento concluído. Arquivo validado e pronto para aplicar as alterações.'); await recordPricingLog('Upload de planilha de custos', Math.max(0, String(reader.result||'').split(/\r?\n/).length-2), {file:file.name,details:'Arquivo lido e colunas EAN, custo e margem conferidas.'});},1100);
+      window.setTimeout(async()=>{const text=String(reader.result||'').replace(/^\ufeff/,''); const lines=text.split(/\r?\n/).filter(Boolean); const dataLines=lines.slice(1); let updated=0; let errors=0; const changes:any[]=[]; if(supabase){for(const line of dataLines){const cols=line.split(';').map(v=>v.replace(/^"|"$/g,'').replace(/""/g,'"')); const ean=cols[0]?.trim(); const cost=Number(String(cols[6]||'').replace(',','.')); const margin=Number(String(cols[7]||'').replace(',','.')); if(!ean||(!Number.isFinite(cost)&&!Number.isFinite(margin)))continue; const current=costProducts.find(p=>String(p.ean)===ean); const payload:any={}; if(Number.isFinite(cost))payload.unit_cost=cost; if(Number.isFinite(margin))payload.target_margin=margin; const result=await supabase.from('products').update(payload).eq('ean',ean).select('id'); if(result.error)errors++; else if(result.data?.length){updated++; changes.push({ean,old_cost:current?.unit_cost??null,new_cost:payload.unit_cost??current?.unit_cost??null,old_margin:current?.target_margin??null,new_margin:payload.target_margin??current?.target_margin??null});} }} setUploadProgress(100); setUploadStatus(errors?`Processamento concluído com ${errors} erro(s). ${updated} produto(s) atualizado(s).`:`Processamento concluído. ${updated} produto(s) atualizado(s) com custo e margem.`); if(updated||errors)await recordPricingLog('Atualização de custos por planilha',updated,{file:file.name,updated,errors,changes});},1100);
     };
     reader.onerror = () => { setUploadProgress(0); setUploadStatus('Não foi possível ler o arquivo. Tente novamente.'); };
-    reader.readAsArrayBuffer(file);
+    reader.readAsText(file);
   };
 
   const updateParam = (i: number, value: string) =>
