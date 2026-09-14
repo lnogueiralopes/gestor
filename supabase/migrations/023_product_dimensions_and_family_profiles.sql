@@ -1,0 +1,12 @@
+begin;
+alter table public.products add column if not exists width_cm numeric(10,2) not null default 7;
+alter table public.products add column if not exists length_cm numeric(10,2) not null default 7;
+alter table public.products add column if not exists height_cm numeric(10,2) not null default 28;
+alter table public.products add column if not exists weight_kg numeric(10,3) not null default 1.1;
+alter table public.products add column if not exists volume_cm3 numeric(14,2) generated always as (width_cm*length_cm*height_cm) stored;
+alter table public.products add constraint products_dimensions_positive check (width_cm>0 and length_cm>0 and height_cm>0 and weight_kg>0);
+grant insert(width_cm,length_cm,height_cm,weight_kg), update(width_cm,length_cm,height_cm,weight_kg) on public.products to authenticated;
+update public.products set width_cm=7,length_cm=7,height_cm=28,weight_kg=1.1 where family_id=1;
+alter table public.marketplace_freight_rules add column if not exists family_signature text;
+comment on column public.marketplace_freight_rules.family_signature is 'Assinatura exata da composição; combinações mistas usam o cálculo dimensional normal.';
+commit;
