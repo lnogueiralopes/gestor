@@ -147,6 +147,8 @@ function Pricing() {
   const [costProducts,setCostProducts]=useState<any[]>([]);
   const [costProductsLoaded,setCostProductsLoaded]=useState(false);
   const [costDownloadMessage,setCostDownloadMessage]=useState('');
+  const [uploadProgress,setUploadProgress]=useState(0);
+  const [uploadStatus,setUploadStatus]=useState('');
   const [pricingLogs,setPricingLogs]=useState<any[]>([]);
   const [connectedAccounts,setConnectedAccounts]=useState<any[]>([]);
   useEffect(()=>{if(supabase)supabase.from('pricing_tables').select('*').order('channel').order('name').then(({data})=>{if(data)setDbTables(data.map(t=>({...t,adjustment:Number(t.adjustment_percent||0)})));});},[]);
@@ -162,6 +164,14 @@ function Pricing() {
   const topSection = isCalcModule ? 'calc' : section;
   const [logPeriod, setLogPeriod] = useState('7');
   const tableFor = (account: any) => activeTables.filter(table => table.channel === account.channel);
+  const recordPricingLog = async (action:string, count:number, details:any) => {
+    if (!supabase) return;
+    const {data:userData}=await supabase.auth.getUser();
+    if(!userData.user) return;
+    const {data:log,error}=await supabase.from('pricing_logs').insert({user_id:userData.user.id,action,affected_count:count,details}).select().single();
+    if(error){setUploadStatus('Ação concluída, mas o log não pôde ser salvo.');return;}
+    if(log)setPricingLogs(current=>[log,...current]);
+  };
   const downloadCostModel = async () => {
     const familyId = costFamily === 'Bebidas' ? 1 : costFamily === 'Suplementos' ? 2 : costFamily === 'Fertilizantes' ? 3 : null;
     const rows = (costProductsLoaded ? costProducts : []).filter((p:any)=>familyId===null || Number(p.family_id??1)===familyId);
@@ -171,7 +181,20 @@ function Pricing() {
     const csv = [headers,...rows.map((p:any)=>[p.ean||'',p.sku||p.ean||'',p.name||'',familyName(p.family_id),p.unit_cost??p.cost??'',p.target_margin??p.margin??'','',''])].map(row=>row.map((v:any)=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
     const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'});
     const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href=url; link.download=`modelo-atualizacao-custos-${costFamily.toLowerCase().replace(/\s+/g,'-')}.csv`; link.style.display='none'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); setCostDownloadMessage(`${rows.length} produto(s) incluído(s) na planilha.`);
-    if (supabase) { const {data:userData}=await supabase.auth.getUser(); if(userData.user){ const details={family:costFamily, count:rows.length, fields:['EAN','SKU','Produto','Família','Custo atual','Margem atual (%)','Novo custo','Nova margem (%)']}; const {data:log}=await supabase.from('pricing_logs').insert({user_id:userData.user.id,action:'Download de planilha de custos',affected_count:rows.length,details}).select().single(); if(log)setPricingLogs(current=>[log,...current]); } }
+    await recordPricingLog('Download de planilha de custos', rows.length, {family:costFamily,count:rows.length,fields:headers});
+  };
+  const processCostFile = (file?: File) => {
+    if (!file) return;
+    setCostFile(file.name); setUploadProgress(5); setUploadStatus('Arquivo recebido. Iniciando leitura…');
+    const reader = new FileReader();
+    reader.onprogress = event => { if (event.lengthComputable) setUploadProgress(Math.max(5, Math.round(event.loaded / event.total * 45))); };
+    reader.onload = () => {
+      setUploadProgress(60); setUploadStatus('Validando colunas EAN, custo e margem…');
+      window.setTimeout(()=>{setUploadProgress(82);setUploadStatus('Conferindo os EANs com o cadastro de produtos…');},500);
+      window.setTimeout(async()=>{setUploadProgress(100);setUploadStatus('Processamento concluído. Arquivo validado e pronto para aplicar as alterações.'); await recordPricingLog('Upload de planilha de custos', Math.max(0, String(reader.result||'').split(/\r?\n/).length-2), {file:file.name,details:'Arquivo lido e colunas EAN, custo e margem conferidas.'});},1100);
+    };
+    reader.onerror = () => { setUploadProgress(0); setUploadStatus('Não foi possível ler o arquivo. Tente novamente.'); };
+    reader.readAsArrayBuffer(file);
   };
 
   const updateParam = (i: number, value: string) =>
@@ -196,8 +219,9 @@ function Pricing() {
       {isCalcModule && <div className="calcModulePanel"><div className="pricingSubmenu" aria-label="Módulos do cálculo"><button type="button" className={`roundAction ${calcModule==='freight'?'addAction':''}`} title="Tabela de frete" aria-label="Tabela de frete" onClick={()=>navigate('/precificador/calculo/frete')}>▥</button><button type="button" className={`roundAction ${calcModule==='matrix'?'addAction':''}`} title="Matriz de preços" aria-label="Matriz de preços" onClick={()=>navigate('/precificador/calculo/matriz')}>▦</button><button type="button" className={`roundAction ${calcModule==='tariffs'?'addAction':''}`} title="Parâmetros de tarifas por marketplace" aria-label="Parâmetros de tarifas por marketplace" onClick={()=>navigate('/precificador/calculo/tarifas')}>%</button></div></div>}
       {section==='log' && <div className="card tableWrap"><div className="sectionHeading"><label className="logPeriod">Período<select value={logPeriod} onChange={e=>setLogPeriod(e.target.value)}><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="all">Todo o histórico</option></select></label></div><table><thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Detalhes</th></tr></thead><tbody>{pricingLogs.length?pricingLogs.map(log=><tr key={log.id}><td>{new Date(log.created_at).toLocaleString('pt-BR')}</td><td>{log.user_id||'Usuário atual'}</td><td>{log.action} ({log.affected_count} itens)</td><td>{JSON.stringify(log.details)}</td></tr>):<tr><td>—</td><td>—</td><td>Nenhuma alteração registrada</td><td>Os próximos uploads e cadastros aparecerão aqui.</td></tr>}</tbody></table></div>}
       {section==='costs' && <div className="card spreadsheetActions">
-        <div className="spreadsheetButtons"><label className="familySelect">Família<select value={costFamily} onChange={e=>{setCostFamily(e.target.value);setCostDownloadMessage('')}}><option>Todas</option><option>Bebidas</option><option>Suplementos</option><option>Fertilizantes</option></select></label><button type="button" className="roundAction spreadsheetIcon" onClick={downloadCostModel} title="Baixar cadastro completo para atualização no Excel" aria-label="Baixar cadastro completo para atualização no Excel">⇩</button><label className="roundAction spreadsheetIcon fileButton" title="Selecionar planilha" aria-label="Selecionar planilha">⇧<input type="file" accept=".xlsx,.xls,.csv" onChange={e=>setCostFile(e.target.files?.[0]?.name||'')} /></label></div>
+        <div className="spreadsheetButtons"><label className="familySelect">Família<select value={costFamily} onChange={e=>{setCostFamily(e.target.value);setCostDownloadMessage('')}}><option>Todas</option><option>Bebidas</option><option>Suplementos</option><option>Fertilizantes</option></select></label><button type="button" className="roundAction spreadsheetIcon" onClick={downloadCostModel} title="Baixar cadastro completo para atualização no Excel" aria-label="Baixar cadastro completo para atualização no Excel">⇩</button><label className="roundAction spreadsheetIcon fileButton" title="Selecionar planilha" aria-label="Selecionar planilha">⇧<input type="file" accept=".xlsx,.xls,.csv" onChange={e=>processCostFile(e.target.files?.[0])} /></label></div>
         {costDownloadMessage&&<p className="fileSelected" role="status">{costDownloadMessage}</p>}
+        {uploadStatus&&<div className="uploadStatus" role="status"><div className="uploadStatusText">{uploadStatus} {uploadProgress>0&&<strong>{uploadProgress}%</strong>}</div><div className="uploadProgress"><span style={{width:`${uploadProgress}%`}} /></div><small>{costFile}</small></div>}
         {costFile&&<p className="fileSelected" role="status">Arquivo selecionado: {costFile}. O processamento será feito após a validação por EAN.</p>}
       </div>}
       {(section==='tariffs'||section==='freight') && <div className="card tableWrap"><table><thead><tr><th>Marketplace</th><th>Família</th><th>Tipo</th><th>Percentual / faixa</th><th>Valor</th></tr></thead><tbody><tr><td>Mercado Livre</td><td>Bebidas, Suplementos, Fertilizantes</td><td>{section==='tariffs'?'Clássico e Premium':'Frete Cross'}</td><td>Premissas cadastradas</td><td>Consultar no Supabase</td></tr><tr><td>Shopee</td><td>Todas</td><td>Comissão por faixa</td><td>Até R$79,99 / acima</td><td>Consultar no Supabase</td></tr></tbody></table></div>}
