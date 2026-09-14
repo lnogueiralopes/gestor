@@ -139,7 +139,8 @@ function Pricing() {
   const [costFile, setCostFile] = useState('');
   const [costFamily, setCostFamily] = useState('Todas');
   const [accountTables, setAccountTables] = useState(() => Object.fromEntries(accounts.map(account => [account.id, account.priceTable])));
-  const tableFor = (account: typeof accounts[number]) => priceTables.filter(table => table.channel === account.channel);
+  const [section, setSection] = useState<'log'|'accounts'|'tables'|'params'|'costs'>('log');
+  const tableFor = (account: typeof accounts[number]) => priceTables.filter(table => table.channel === account.channel && (account.channel !== 'Mercado Livre' || ['Preço Clássico','Clássico + 10% campanha'].includes(table.name)));
 
   const updateParam = (i: number, value: string) =>
     setParams(p => p.map((x, idx) => idx === i ? { ...x, value } : x));
@@ -157,13 +158,17 @@ function Pricing() {
   return (
     <>
       <PageHeader title="Precificador" subtitle="Margens por produto, premissas e regras editáveis para kits." action="Recalcular preços" />
-      <div className="card spreadsheetActions">
+      <div className="pricingMenu" aria-label="Seções do precificador">
+        {([['log','Log'],['accounts','Tabelas por conta'],['tables','Tabelas de preço'],['params','Parâmetros'],['costs','Custos de produtos']] as const).map(([id,label])=><button key={id} type="button" className={`roundAction ${section===id?'addAction':''}`} title={label} aria-label={label} onClick={()=>setSection(id)}>{id==='log'?'≡':id==='accounts'?'◎':id==='tables'?'▤':id==='params'?'⚙':'⇩'}</button>)}
+      </div>
+      {section==='log' && <div className="card tableWrap"><h3>Log do precificador</h3><p className="muted">Histórico das alterações realizadas no precificador.</p><table><thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Detalhes</th></tr></thead><tbody><tr><td>—</td><td>—</td><td>Nenhuma alteração registrada</td><td>Os próximos uploads e cadastros aparecerão aqui.</td></tr></tbody></table></div>}
+      {section==='costs' && <div className="card spreadsheetActions">
         <div><h3>Atualizar custos por planilha</h3><p className="muted">Baixe o modelo, edite apenas o novo custo usando o EAN como chave e selecione o arquivo para validação.</p></div>
         <div className="spreadsheetButtons"><label className="familySelect">Família<select value={costFamily} onChange={e=>setCostFamily(e.target.value)}><option>Todas</option><option>Bebidas</option><option>Suplementos</option><option>Fertilizantes</option></select></label><a className="primary" href={`/modelo-atualizacao-custos.xlsx?family=${encodeURIComponent(costFamily)}`} download>Baixar modelo Excel</a><label className="fileButton"><span>Selecionar planilha</span><input type="file" accept=".xlsx,.xls,.csv" onChange={e=>setCostFile(e.target.files?.[0]?.name||'')} /></label></div>
         {costFile&&<p className="fileSelected" role="status">Arquivo selecionado: {costFile}. O processamento será feito após a validação por EAN.</p>}
-      </div>
-      <div className="pricingEditorButtons"><button type="button" className="roundAction" title="Premissas gerais" aria-label="Premissas gerais" onClick={() => setShowAssumptions(value => !value)}>⚙</button><button type="button" className="roundAction" title="Desconto progressivo e kit" aria-label="Desconto progressivo e kit" onClick={() => setShowKitRules(value => !value)}>▦</button><span className="muted">Parâmetros de cálculo</span></div>
-      {(showAssumptions || showKitRules) && <div className="grid2">
+      </div>}
+      {section==='params' && <div className="pricingEditorButtons"><button type="button" className="roundAction" title="Premissas gerais" aria-label="Premissas gerais" onClick={() => setShowAssumptions(value => !value)}>⚙</button><button type="button" className="roundAction" title="Desconto progressivo e kit" aria-label="Desconto progressivo e kit" onClick={() => setShowKitRules(value => !value)}>▦</button><span className="muted">Selecione um parâmetro para editar</span></div>}
+      {section==='params' && (showAssumptions || showKitRules) && <div className="grid2">
         {showAssumptions && <div className="card">
           <h3>Premissas gerais</h3>
           <div className="formRows">
@@ -184,14 +189,15 @@ function Pricing() {
           <button className="primary" disabled>Salvar regras</button>
         </div>}
       </div>}
-      <div className="card priceTableConfig">
+      {section==='accounts' && <div className="card priceTableConfig">
         <div className="sectionHeading"><div><h3>Tabelas / marketplace</h3><p className="muted">Selecione a tabela de preço usada em cada conta associada.</p></div><button className="roundAction addAction" type="button" title="Adicionar tabela de preço" aria-label="Adicionar tabela de preço" disabled>+</button></div>
         <div className="formRows">
-          {accounts.map(account => <label key={account.id}><span><strong>{account.name}</strong><small>{account.channel}</small></span><select value={accountTables[account.id]} onChange={e => setAccountTables(current => ({...current,[account.id]:e.target.value}))}>{tableFor(account).map(table => <option key={table.id} value={table.id}>{table.name}</option>)}</select></label>)}
+          {accounts.map(account => <label key={account.id}><span><strong>{account.channel}</strong><small>Nickname: {account.name}</small></span><select value={accountTables[account.id]} onChange={e => setAccountTables(current => ({...current,[account.id]:e.target.value}))}>{tableFor(account).map(table => <option key={table.id} value={table.id}>{table.name}</option>)}</select></label>)}
         </div>
         <button className="primary" disabled>Salvar tabelas por conta</button>
-      </div>
-      <div className="card"><div className="sectionHeading"><div><h3>Tabelas de preço</h3><p className="muted">Preço padrão e tabelas adicionais por campanha, comissão ou redução de margem.</p></div><button className="roundAction addAction" type="button" title="Cadastrar tabela de preço" aria-label="Cadastrar tabela de preço" disabled>+</button></div><p className="muted">Campanha +10% calcula a gordura necessária para preservar o resultado após desconto de 10%. Outras regras serão cadastradas nesta seção.</p></div>
+      </div>}
+      {section==='tables' && <div className="card"><div className="sectionHeading"><div><h3>Tabelas de preço</h3><p className="muted">Preço normal e campanha +10%. Classico ou Premium será definido no cadastro do anúncio.</p></div><button className="roundAction addAction" type="button" title="Cadastrar tabela de preço" aria-label="Cadastrar tabela de preço" disabled>+</button></div><table><thead><tr><th>Marketplace</th><th>Nome</th><th>Regra</th><th>Informações</th></tr></thead><tbody>{priceTables.filter(t=>t.name==='Preço normal'||t.name==='Normal + 10% campanha'||t.name==='Preço Clássico'||t.name==='Clássico + 10% campanha').map(t=><tr key={t.id}><td>{t.channel}</td><td>{t.name}</td><td>{t.adjustment?'Campanha +10%':'Preço padrão'}</td><td title={t.adjustment?'Gordura para preservar o resultado após desconto de 10%.':'Calculada para entregar o resultado planejado do produto.'}>ⓘ</td></tr>)}</tbody></table></div>}
+      <div className="card"><h3>Margem por produto</h3><p className="muted">Custos e margens vêm do cadastro de produtos e da planilha de custos.</p><table><thead><tr><th>SKU</th><th>Produto</th><th>Custo</th><th>Margem</th><th>Preço padrão</th><th>Campanha +10%</th></tr></thead><tbody>{products.map(p=><tr key={p.id}><td>{p.sku}</td><td>{p.name}</td><td>R$ {p.cost.toFixed(2).replace('.',',')}</td><td>{p.margin}%</td><td>R$ 134,90</td><td>R$ 149,89</td></tr>)}</tbody></table></div>
     </>
   );
 }
