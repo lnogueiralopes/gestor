@@ -1,7 +1,7 @@
 import TopNavigation from './TopNavigation';
 import { useState } from "react";
 import { Routes, Route, NavLink, Navigate } from "react-router-dom";
-import { accounts, kits, kitMatrix, kitRules, pricingParameters, products, productMatrix, type ChannelCell } from "./demo";
+import { accounts, kits, kitMatrix, kitRules, pricingParameters, products, productMatrix, priceTables, type ChannelCell } from "./demo";
 
 type MatrixProps = {
   kind: "products" | "kits";
@@ -134,6 +134,11 @@ function Matrix({ kind }: MatrixProps) {
 function Pricing() {
   const [params, setParams] = useState(pricingParameters);
   const [rules, setRules] = useState(kitRules);
+  const [showAssumptions, setShowAssumptions] = useState(false);
+  const [showKitRules, setShowKitRules] = useState(false);
+  const [costFile, setCostFile] = useState('');
+  const [accountTables, setAccountTables] = useState(() => Object.fromEntries(accounts.map(account => [account.id, account.priceTable])));
+  const tableFor = (account: typeof accounts[number]) => priceTables.filter(table => table.channel === account.channel);
 
   const updateParam = (i: number, value: string) =>
     setParams(p => p.map((x, idx) => idx === i ? { ...x, value } : x));
@@ -151,8 +156,14 @@ function Pricing() {
   return (
     <>
       <PageHeader title="Precificador" subtitle="Margens por produto, premissas e regras editáveis para kits." action="Recalcular preços" />
-      <div className="grid2">
-        <div className="card">
+      <div className="card spreadsheetActions">
+        <div><h3>Atualizar custos por planilha</h3><p className="muted">Baixe o modelo, edite apenas o novo custo usando o EAN como chave e selecione o arquivo para validação.</p></div>
+        <div className="spreadsheetButtons"><a className="primary" href="/modelo-atualizacao-custos.xlsx" download>Baixar modelo Excel</a><label className="fileButton"><span>Selecionar planilha</span><input type="file" accept=".xlsx,.xls,.csv" onChange={e=>setCostFile(e.target.files?.[0]?.name||'')} /></label></div>
+        {costFile&&<p className="fileSelected" role="status">Arquivo selecionado: {costFile}. O processamento será feito após a validação por EAN.</p>}
+      </div>
+      <div className="pricingEditorButtons"><button type="button" className="secondary" onClick={() => setShowAssumptions(value => !value)}>{showAssumptions ? 'Ocultar premissas' : 'Editar premissas'}</button><button type="button" className="secondary" onClick={() => setShowKitRules(value => !value)}>{showKitRules ? 'Ocultar regras de kits' : 'Editar regras de kits'}</button></div>
+      {(showAssumptions || showKitRules) && <div className="grid2">
+        {showAssumptions && <div className="card">
           <h3>Premissas</h3>
           <div className="formRows">
             {params.map((p, i) => (
@@ -160,8 +171,8 @@ function Pricing() {
             ))}
           </div>
           <button className="primary" disabled>Salvar premissas</button>
-        </div>
-        <div className="card">
+        </div>}
+        {showKitRules && <div className="card">
           <h3>Redução de margem por kit</h3>
           <table className="compact">
             <thead><tr><th>Quantidade</th><th>Redução (p.p.)</th></tr></thead>
@@ -170,11 +181,19 @@ function Pricing() {
             </tbody>
           </table>
           <button className="primary" disabled>Salvar regras</button>
+        </div>}
+      </div>}
+      <div className="card priceTableConfig">
+        <h3>Tabela de preço por conta</h3>
+        <p className="muted">Escolha qual tabela será usada para calcular e publicar os preços de cada canal.</p>
+        <div className="formRows">
+          {accounts.map(account => <label key={account.id}><span><strong>{account.name}</strong><small>{account.channel}</small></span><select value={accountTables[account.id]} onChange={e => setAccountTables(current => ({...current,[account.id]:e.target.value}))}>{tableFor(account).map(table => <option key={table.id} value={table.id}>{table.name}</option>)}</select></label>)}
         </div>
+        <button className="primary" disabled>Salvar tabelas por conta</button>
       </div>
       <div className="card">
         <h3>Margem por produto</h3>
-        <p className="muted">Preços ilustrativos. Os campos não recalculam preços nem salvam alterações nesta versão.</p>
+        <p className="muted">A tabela selecionada por conta será aplicada ao cálculo e à publicação dos anúncios.</p>
         <table>
           <thead><tr><th>SKU</th><th>Produto</th><th>Custo</th><th>Margem base</th><th>ML</th><th>Shopee</th><th>Ruta Direct Shop</th></tr></thead>
           <tbody>

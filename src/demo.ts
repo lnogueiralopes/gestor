@@ -38,9 +38,19 @@ export const kits: Kit[] = [
 ];
 
 export const accounts = [
-  { id: "ml1", name: "ML Principal", channel: "Mercado Livre" },
-  { id: "sh1", name: "Shopee Principal", channel: "Shopee" },
-  { id: "rd1", name: "Ruta Direct Shop", channel: "Ruta Direct Shop" }
+  { id: "ml1", name: "ML Principal", channel: "Mercado Livre", priceTable: "ml-classic" },
+  { id: "sh1", name: "Shopee Principal", channel: "Shopee", priceTable: "sh-normal" },
+  { id: "rd1", name: "Ruta Direct Shop", channel: "Ruta Direct Shop", priceTable: "rd-standard" }
+];
+
+export const priceTables = [
+  { id: "ml-classic", channel: "Mercado Livre", name: "Preço Clássico", adjustment: 0 },
+  { id: "ml-premium", channel: "Mercado Livre", name: "Preço Premium", adjustment: 0.08 },
+  { id: "ml-classic-campaign", channel: "Mercado Livre", name: "Clássico + 10% campanha", adjustment: 0.10 },
+  { id: "ml-premium-campaign", channel: "Mercado Livre", name: "Premium + 10% campanha", adjustment: 0.18 },
+  { id: "sh-normal", channel: "Shopee", name: "Preço normal", adjustment: 0 },
+  { id: "sh-campaign", channel: "Shopee", name: "Normal + 10% campanha", adjustment: 0.10 },
+  { id: "rd-standard", channel: "Ruta Direct Shop", name: "Preço padrão", adjustment: 0 }
 ];
 
 export const productMatrix: Record<string, Record<string, ChannelCell>> = {
