@@ -21,7 +21,7 @@ const paths:Record<string,[string,string,string]>={
 };
 export default function Breadcrumbs({action,onBack}:{action?:string;onBack?:()=>void}) {
  const {pathname}=useLocation();const entry=paths[pathname];
- const pricingModules:Record<string,string>={'/precificador':'Log','/precificador/tabelas-conta':'Tabelas por conta','/precificador/tabelas-preco':'Tabelas de preços','/precificador/parametros':'Parâmetros','/precificador/custos':'Custos de produtos','/precificador/calculo/matriz':'Matriz de preços','/precificador/calculo/tarifas':'Parâmetros de tarifas por marketplace','/precificador/calculo/frete':'Tabela de frete'};
+ const pricingModules:Record<string,string>={'/precificador':'Log','/precificador/calculo':'Cálculo','/precificador/tabelas-conta':'Tabelas por conta','/precificador/tabelas-preco':'Tabelas de preços','/precificador/parametros':'Parâmetros','/precificador/custos':'Custos de produtos','/precificador/calculo/matriz':'Matriz de preços','/precificador/calculo/tarifas':'Parâmetros de tarifas por marketplace','/precificador/calculo/frete':'Tabela de frete'};
  const moduleLabel=pricingModules[pathname];
  if(moduleLabel)return <nav className="breadcrumbs" aria-label="Caminho de navegação"><Link to="/dashboard" onClick={onBack}>Menu</Link><span aria-hidden="true">/</span><Link to="/produtos" onClick={onBack}>Produtos</Link><span aria-hidden="true">/</span><Link to="/precificador" onClick={onBack}>Cálculo</Link><span aria-hidden="true">/</span><strong aria-current="page">{moduleLabel}</strong></nav>;
  return <nav className="breadcrumbs" aria-label="Caminho de navegação"><Link to="/dashboard" onClick={onBack}>Menu</Link><span aria-hidden="true">/</span>

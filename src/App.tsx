@@ -150,7 +150,7 @@ function Pricing() {
   const accountList = connectedAccounts.length ? connectedAccounts : accounts.filter(a=>a.channel==='Mercado Livre');
   const activeTables = dbTables.length ? dbTables : priceTables;
   useEffect(()=>{if(supabase)supabase.from('pricing_product_matrix').select('*').order('name').then(({data})=>{if(data)setMatrixRows(data);});},[]);
-  const section = location.pathname.includes('tabelas-conta') ? 'accounts' : location.pathname.includes('tabelas-preco') ? 'tables' : location.pathname.includes('parametros') ? 'params' : location.pathname.includes('custos') ? 'costs' : location.pathname.includes('frete') ? 'freight' : location.pathname.includes('tarifas') ? 'tariffs' : location.pathname.includes('matriz') ? 'matrix' : 'log';
+  const section = location.pathname === '/precificador/calculo' ? 'calc' : location.pathname.includes('tabelas-conta') ? 'accounts' : location.pathname.includes('tabelas-preco') ? 'tables' : location.pathname.includes('parametros') ? 'params' : location.pathname.includes('custos') ? 'costs' : location.pathname.includes('frete') ? 'freight' : location.pathname.includes('tarifas') ? 'tariffs' : location.pathname.includes('matriz') ? 'matrix' : 'log';
   const [logPeriod, setLogPeriod] = useState('7');
   const tableFor = (account: any) => activeTables.filter(table => table.channel === account.channel);
 
