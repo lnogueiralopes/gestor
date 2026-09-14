@@ -79,7 +79,7 @@ const openForm = (product?: Product) => { setImageFields(Array.from({length:6},(
         if(form.family_id!=='1'&&['winery','vintage','varietal'].includes(key))return null;
         const k=key as Exclude<keyof typeof form,'is_active'>;
         const numeric=['unit_cost','target_margin','stock_on_hand','quantity_per_box'].includes(key);
-        return <label key={key} className={['summary','description'].includes(key)?'wideField':''}>{label}{['summary','description'].includes(key)?<textarea rows={key==='description'?3:2} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>:<input type={numeric?'number':'text'} min={numeric?0:undefined} step={key==='stock_on_hand'?1:key==='target_margin'?'0.0001':'0.01'} required={['name'].includes(key)} readOnly={['id_produto','sku'].includes(key)||key==='ean'&&Boolean(editing)} placeholder={key==='id_produto'?'Automático':undefined} value={key==='sku'?form.ean:form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>}</label>;
+        return <label key={key} className={['summary','description'].includes(key)?'wideField':''}>{label}{['summary','description'].includes(key)?<textarea rows={key==='description'?3:2} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>:<input type={numeric?'number':'text'} min={numeric?0:undefined} step={key==='stock_on_hand'?1:key==='target_margin'?'0.0001':'0.01'} required={['name','quantity_per_box'].includes(key)} readOnly={['id_produto','sku'].includes(key)||key==='ean'&&Boolean(editing)} placeholder={key==='id_produto'?'Automático':undefined} value={key==='sku'?form.ean:form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/>}</label>;
       })}
       <label className="wideField"><input type="checkbox" checked={form.is_active} onChange={e=>setForm({...form,is_active:e.target.checked})}/> Produto ativo</label>
       </div><h3>Imagens</h3><div className="imageFields">{imageFields.map((url,i)=><ImageField key={i} url={url} index={i} onChange={value=>setImageFields(current=>current.map((v,n)=>n===i?value:v))}/>)}</div>
@@ -98,4 +98,5 @@ const openForm = (product?: Product) => { setImageFields(Array.from({length:6},(
     </>}
   </main></div>;
 }
+
 
