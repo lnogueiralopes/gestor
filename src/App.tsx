@@ -140,6 +140,7 @@ function Pricing() {
   const [costFamily, setCostFamily] = useState('Todas');
   const [accountTables, setAccountTables] = useState(() => Object.fromEntries(accounts.map(account => [account.id, account.priceTable])));
   const [section, setSection] = useState<'log'|'accounts'|'tables'|'params'|'costs'>('log');
+  const [logPeriod, setLogPeriod] = useState('7');
   const tableFor = (account: typeof accounts[number]) => priceTables.filter(table => table.channel === account.channel && (account.channel !== 'Mercado Livre' || ['Preço Clássico','Clássico + 10% campanha'].includes(table.name)));
 
   const updateParam = (i: number, value: string) =>
@@ -157,11 +158,11 @@ function Pricing() {
 
   return (
     <>
-      <PageHeader title="Precificador" subtitle="Margens por produto, premissas e regras editáveis para kits." action="Recalcular preços" />
+      <PageHeader title="Precificador" subtitle="Margens por produto, premissas e regras editáveis para kits." />
       <div className="pricingMenu" aria-label="Seções do precificador">
         {([['log','Log'],['accounts','Tabelas por conta'],['tables','Tabelas de preço'],['params','Parâmetros'],['costs','Custos de produtos']] as const).map(([id,label])=><button key={id} type="button" className={`roundAction ${section===id?'addAction':''}`} title={label} aria-label={label} onClick={()=>setSection(id)}>{id==='log'?'≡':id==='accounts'?'◎':id==='tables'?'▤':id==='params'?'⚙':'⇩'}</button>)}
       </div>
-      {section==='log' && <div className="card tableWrap"><h3>Log do precificador</h3><p className="muted">Histórico das alterações realizadas no precificador.</p><table><thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Detalhes</th></tr></thead><tbody><tr><td>—</td><td>—</td><td>Nenhuma alteração registrada</td><td>Os próximos uploads e cadastros aparecerão aqui.</td></tr></tbody></table></div>}
+      {section==='log' && <div className="card tableWrap"><div className="sectionHeading"><p className="muted">Histórico recente do precificador</p><label className="logPeriod">Período<select value={logPeriod} onChange={e=>setLogPeriod(e.target.value)}><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="all">Todo o histórico</option></select></label></div><table><thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Detalhes</th></tr></thead><tbody><tr><td>—</td><td>—</td><td>Nenhuma alteração registrada</td><td>Os próximos uploads e cadastros aparecerão aqui.</td></tr></tbody></table></div>}
       {section==='costs' && <div className="card spreadsheetActions">
         <div><h3>Atualizar custos por planilha</h3><p className="muted">Baixe o modelo, edite apenas o novo custo usando o EAN como chave e selecione o arquivo para validação.</p></div>
         <div className="spreadsheetButtons"><label className="familySelect">Família<select value={costFamily} onChange={e=>setCostFamily(e.target.value)}><option>Todas</option><option>Bebidas</option><option>Suplementos</option><option>Fertilizantes</option></select></label><a className="primary" href={`/modelo-atualizacao-custos.xlsx?family=${encodeURIComponent(costFamily)}`} download>Baixar modelo Excel</a><label className="fileButton"><span>Selecionar planilha</span><input type="file" accept=".xlsx,.xls,.csv" onChange={e=>setCostFile(e.target.files?.[0]?.name||'')} /></label></div>
