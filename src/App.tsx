@@ -199,7 +199,7 @@ function Pricing() {
         </div>
         <button className="primary" disabled>Salvar tabelas por conta</button>
       </div>}
-      {section==='tables' && <div className="card"><div className="sectionHeading"><div><h3>Tabelas de preço</h3><p className="muted">Preço normal e campanha +10%. Classico ou Premium será definido no cadastro do anúncio.</p></div><button className="roundAction addAction" type="button" title="Cadastrar tabela de preço" aria-label="Cadastrar tabela de preço" disabled>+</button></div><table><thead><tr><th>Marketplace</th><th>Nome</th><th>Regra</th><th>Informações</th></tr></thead><tbody>{priceTables.filter(t=>t.name==='Preço normal'||t.name==='Normal + 10% campanha'||t.name==='Preço Clássico'||t.name==='Clássico + 10% campanha').map(t=><tr key={t.id}><td>{t.channel}</td><td>{t.name}</td><td>{t.adjustment?'Campanha +10%':'Preço padrão'}</td><td title={t.adjustment?'Gordura para preservar o resultado após desconto de 10%.':'Calculada para entregar o resultado planejado do produto.'}>ⓘ</td></tr>)}</tbody></table></div>}\n    </>
+      {section==='tables' && <div className="card"><div className="sectionHeading"><div><h3>Tabelas de preço</h3></div><button className="roundAction addAction" type="button" title="Cadastrar tabela de preço" aria-label="Cadastrar tabela de preço" disabled>+</button></div><table><thead><tr><th>Marketplace</th><th>Nome</th><th>Regra</th><th>Informações</th></tr></thead><tbody>{priceTables.filter(t=>t.name==='Preço normal'||t.name==='Normal + 10% campanha'||t.name==='Preço Clássico'||t.name==='Clássico + 10% campanha').map(t=><tr key={t.id}><td>{t.channel}</td><td>{t.name}</td><td>{t.adjustment?'Campanha +10%':'Preço padrão'}</td><td title={t.adjustment?'Gordura para preservar o resultado após desconto de 10%.':'Calculada para entregar o resultado planejado do produto.'}>ⓘ</td></tr>)}</tbody></table></div>}\n    </>
   );
 }
 
@@ -269,6 +269,7 @@ export default function App() {
   return <AppShell />;
 }
 export { Sidebar, Dashboard, Matrix, Pricing, Accounts, Users, Placeholder };
+
 
 
 
