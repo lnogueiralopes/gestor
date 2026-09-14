@@ -25,6 +25,6 @@ export default function Breadcrumbs({action,onBack}:{action?:string;onBack?:()=>
  const moduleLabel=pricingModules[pathname];
  if(moduleLabel)return <nav className="breadcrumbs" aria-label="Caminho de navegação"><Link to="/dashboard" onClick={onBack}>Menu</Link><span aria-hidden="true">/</span><Link to="/produtos" onClick={onBack}>Produtos</Link><span aria-hidden="true">/</span><Link to="/precificador" onClick={onBack}>Precificador</Link><span aria-hidden="true">/</span><strong aria-current="page">{moduleLabel}</strong></nav>;
  return <nav className="breadcrumbs" aria-label="Caminho de navegação"><Link to="/dashboard" onClick={onBack}>Menu</Link><span aria-hidden="true">/</span>
- {entry?<><Link to={entry[2]} onClick={onBack}>{entry[0]}</Link><span aria-hidden="true">/</span>{action?<><button type="button" onClick={onBack}>{entry[1]}</button><span aria-hidden="true">/</span><strong aria-current="page">{action}</strong></>:<strong aria-current="page">{entry[1]}</strong></>:<strong aria-current="page">Dashboard</strong>}
+ {entry ? <><Link to={entry[2]} onClick={onBack}>{entry[0]}</Link><span aria-hidden="true">/</span>{action ? <><button type="button" onClick={onBack}>{entry[1]}</button><span aria-hidden="true">/</span><strong aria-current="page">{action}</strong></> : <strong aria-current="page">{entry[1]}</strong>}</> : <strong aria-current="page">Dashboard</strong>}
  </nav>;
 }
