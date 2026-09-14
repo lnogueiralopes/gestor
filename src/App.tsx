@@ -1,7 +1,8 @@
 import TopNavigation from './TopNavigation';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { accounts, kits, kitMatrix, kitRules, pricingParameters, products, productMatrix, priceTables, type ChannelCell } from "./demo";
+import { supabase } from './lib/supabase';
 
 type MatrixProps = {
   kind: "products" | "kits";
