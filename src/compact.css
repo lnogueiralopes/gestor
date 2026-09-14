@@ -90,3 +90,4 @@ table,input,textarea,select{font-family:Montserrat,Arial,sans-serif;font-variant
   .rocketWorkspace .formActions button{max-width:100%}
 }
 
+.sectionHeading{display:flex;align-items:center;justify-content:space-between;gap:12px}.sectionHeading h3{margin-bottom:4px}

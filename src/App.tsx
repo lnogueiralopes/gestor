@@ -162,10 +162,10 @@ function Pricing() {
         <div className="spreadsheetButtons"><label className="familySelect">Família<select value={costFamily} onChange={e=>setCostFamily(e.target.value)}><option>Todas</option><option>Bebidas</option><option>Suplementos</option><option>Fertilizantes</option></select></label><a className="primary" href={`/modelo-atualizacao-custos.xlsx?family=${encodeURIComponent(costFamily)}`} download>Baixar modelo Excel</a><label className="fileButton"><span>Selecionar planilha</span><input type="file" accept=".xlsx,.xls,.csv" onChange={e=>setCostFile(e.target.files?.[0]?.name||'')} /></label></div>
         {costFile&&<p className="fileSelected" role="status">Arquivo selecionado: {costFile}. O processamento será feito após a validação por EAN.</p>}
       </div>
-      <div className="pricingEditorButtons"><button type="button" className="secondary" onClick={() => setShowAssumptions(value => !value)}>{showAssumptions ? 'Ocultar premissas' : 'Editar premissas'}</button><button type="button" className="secondary" onClick={() => setShowKitRules(value => !value)}>{showKitRules ? 'Ocultar regras de kits' : 'Editar regras de kits'}</button></div>
+      <div className="pricingEditorButtons"><button type="button" className="roundAction" title="Premissas gerais" aria-label="Premissas gerais" onClick={() => setShowAssumptions(value => !value)}>⚙</button><button type="button" className="roundAction" title="Desconto progressivo e kit" aria-label="Desconto progressivo e kit" onClick={() => setShowKitRules(value => !value)}>▦</button><span className="muted">Parâmetros de cálculo</span></div>
       {(showAssumptions || showKitRules) && <div className="grid2">
         {showAssumptions && <div className="card">
-          <h3>Premissas</h3>
+          <h3>Premissas gerais</h3>
           <div className="formRows">
             {params.map((p, i) => (
               <label key={p.key}><span>{p.label}</span><div><input value={p.value} onChange={e => updateParam(i, e.target.value)} /><b>{p.suffix}</b></div></label>
@@ -174,7 +174,7 @@ function Pricing() {
           <button className="primary" disabled>Salvar premissas</button>
         </div>}
         {showKitRules && <div className="card">
-          <h3>Redução de margem por kit</h3>
+          <h3>Desconto progressivo / kit</h3>
           <table className="compact">
             <thead><tr><th>Quantidade</th><th>Redução (p.p.)</th></tr></thead>
             <tbody>
@@ -185,29 +185,13 @@ function Pricing() {
         </div>}
       </div>}
       <div className="card priceTableConfig">
-        <h3>Tabela de preço por conta</h3>
-        <p className="muted">Escolha qual tabela será usada para calcular e publicar os preços de cada canal.</p>
+        <div className="sectionHeading"><div><h3>Tabelas / marketplace</h3><p className="muted">Selecione a tabela de preço usada em cada conta associada.</p></div><button className="roundAction addAction" type="button" title="Adicionar tabela de preço" aria-label="Adicionar tabela de preço" disabled>+</button></div>
         <div className="formRows">
           {accounts.map(account => <label key={account.id}><span><strong>{account.name}</strong><small>{account.channel}</small></span><select value={accountTables[account.id]} onChange={e => setAccountTables(current => ({...current,[account.id]:e.target.value}))}>{tableFor(account).map(table => <option key={table.id} value={table.id}>{table.name}</option>)}</select></label>)}
         </div>
         <button className="primary" disabled>Salvar tabelas por conta</button>
       </div>
-      <div className="card">
-        <h3>Margem por produto</h3>
-        <p className="muted">A tabela selecionada por conta será aplicada ao cálculo e à publicação dos anúncios.</p>
-        <table>
-          <thead><tr><th>SKU</th><th>Produto</th><th>Custo</th><th>Margem base</th><th>ML</th><th>Shopee</th><th>Ruta Direct Shop</th></tr></thead>
-          <tbody>
-            {products.map(p => (
-              <tr key={p.id}>
-                <td>{p.sku}</td><td>{p.name}</td><td>R$ {p.cost.toFixed(2).replace(".", ",")}</td>
-                <td><input className="short" defaultValue={p.margin} /> %</td>
-                <td>R$ 134,90</td><td>R$ 129,90</td><td>R$ 119,90</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <div className="card"><div className="sectionHeading"><div><h3>Tabelas de preço</h3><p className="muted">Preço padrão e tabelas adicionais por campanha, comissão ou redução de margem.</p></div><button className="roundAction addAction" type="button" title="Cadastrar tabela de preço" aria-label="Cadastrar tabela de preço" disabled>+</button></div><p className="muted">Campanha +10% calcula a gordura necessária para preservar o resultado após desconto de 10%. Outras regras serão cadastradas nesta seção.</p></div>
     </>
   );
 }
