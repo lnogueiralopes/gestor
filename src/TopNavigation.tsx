@@ -10,6 +10,15 @@ const groups = [
   {label:'Automação',items:[['/automacoes','Agendamentos']]},
   {label:'Sistema',items:[['/usuarios','Usuários'],['/configuracoes','Configurações']]},
 ];
+const icons = [
+  'M4 7h16v13H4z M9 7V4h6v3 M4 12h16',
+  'M3 10h5l12-5v14L8 14H3z M8 14l2 7H6l-2-7',
+  'M6 3h12v18l-3-2-3 2-3-2-3 2V3z M9 8h6 M9 12h6',
+  'M3 8h18v13H3z M3 8l3-5h12l3 5 M8 13h8',
+  'M4 7a8 8 0 0 1 14-2 M18 5V2 M18 5h-3 M20 17a8 8 0 0 1-14 2 M6 19v3 M6 19h3',
+  'M4 6h16 M4 12h16 M4 18h16 M8 3v6 M16 9v6 M10 15v6',
+];
+function MenuIcon({path}:{path:string}){return <svg className="mobileNavIcon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={path}/></svg>}
 export default function TopNavigation() {
   const [signingOut,setSigningOut]=useState(false);
   const [exitError,setExitError]=useState('');
@@ -20,12 +29,12 @@ export default function TopNavigation() {
   useEffect(()=>{const close=(event:PointerEvent)=>{if(!root.current?.contains(event.target as Node))setOpen(null);};document.addEventListener('pointerdown',close);return()=>document.removeEventListener('pointerdown',close);},[]);
   return <header className="topNavigation" ref={root} onKeyDown={e=>{if(e.key==='Escape'){setOpen(null); const group=(e.target as HTMLElement).closest('.navGroup');(group?.querySelector('button') as HTMLButtonElement)?.focus();}}}>
 
-    <NavLink to="/dashboard" className="rocketWordmark" aria-label="Rocket — início"><span>ROCKET</span></NavLink>
+    <NavLink to="/dashboard" className="rocketWordmark" aria-label="Rocket — início"><span>ROCKET</span><b aria-hidden="true">R</b></NavLink>
     <nav aria-label="Navegação principal" className="topLinks">
-      <NavLink to="/dashboard" className="overviewLink">DASHBOARD</NavLink>
-      {groups.map((group,index)=>{const expanded=open===group.label;const active=group.items.some(([path])=>path===location.pathname);return <div key={group.label} className="navGroup" onMouseEnter={()=>setOpen(group.label)} onMouseLeave={()=>setOpen(null)} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setOpen(null);}}>
-        <button type="button" className={active?'groupActive':''} aria-expanded={expanded} aria-controls={`nav-group-${index}`} onClick={()=>setOpen(expanded?null:group.label)} onKeyDown={e=>{if(e.key==='ArrowDown'){e.preventDefault();setOpen(group.label);requestAnimationFrame(()=>document.getElementById(`nav-group-${index}`)?.querySelector('a')?.focus());}}}>
-          {group.label}<span aria-hidden="true">⌄</span>
+      <NavLink to="/dashboard" className="overviewLink" aria-label="Dashboard" title="Dashboard"><MenuIcon path="M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z"/><span className="navLabel">DASHBOARD</span></NavLink>
+      {groups.map((group,index)=>{const expanded=open===group.label;const active=group.items.some(([path])=>path===location.pathname);return <div key={group.label} className="navGroup" onMouseEnter={()=>{if(window.matchMedia('(hover: hover)').matches)setOpen(group.label)}} onMouseLeave={()=>{if(window.matchMedia('(hover: hover)').matches)setOpen(null)}} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setOpen(null);}}>
+        <button type="button" className={active?'groupActive':''} aria-label={group.label} title={group.label} aria-expanded={expanded} aria-controls={`nav-group-${index}`} onClick={()=>setOpen(expanded?null:group.label)} onKeyDown={e=>{if(e.key==='ArrowDown'){e.preventDefault();setOpen(group.label);requestAnimationFrame(()=>document.getElementById(`nav-group-${index}`)?.querySelector('a')?.focus());}}}>
+          <MenuIcon path={icons[index]}/><span className="navLabel">{group.label}</span><span className="navChevron" aria-hidden="true">⌄</span>
         </button><div className="navDropdown" id={`nav-group-${index}`} hidden={!expanded}>{group.items.map(([path,label])=><NavLink key={path} to={path} onClick={()=>setOpen(null)}>{label}{path.startsWith('/estoque/')&&<small>Em preparação</small>}</NavLink>)}</div>
       </div>;})}
     </nav>
