@@ -11,7 +11,11 @@
     "not_found_handling": "single-page-application"
   },
   "vars": {
-    "APP_ENV": "demo"
+    "APP_ENV": "demo",
+    "ML_CLIENT_ID": "566450472142174",
+    "ML_REDIRECT_URI": "https://gestor.lnogueiralopes.workers.dev/api/marketplaces/mercadolivre/callback",
+    "SUPABASE_URL": "https://hgxeybqujthsucfhejqx.supabase.co"
   },
-  "keep_vars": true
+  "keep_vars": true,
+  "observability": { "logs": { "enabled": true } }
 }
