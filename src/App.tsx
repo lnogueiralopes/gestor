@@ -173,7 +173,7 @@ function Pricing() {
     if (!supabase) return;
     const {data:userData}=await supabase.auth.getUser();
     if(!userData.user) return;
-    const {data:log,error}=await supabase.from('pricing_logs').insert({user_id:userData.user.id,action,affected_count:count,details}).select().single();
+    const {data:log,error}=await supabase.from('pricing_logs').insert({user_id:userData.user.id,action,affected_count:count,details:{...details,user_email:userData.user.email||null}}).select().single();
     if(error){setUploadStatus('Ação concluída, mas o log não pôde ser salvo.');return;}
     if(log)setPricingLogs(current=>[log,...current]);
   };
