@@ -186,12 +186,7 @@ function Pricing() {
         </div>}
         {showKitRules && <div className="card">
           <h3>Desconto progressivo / kit</h3>
-          <table className="compact">
-            <thead><tr><th>Quantidade</th><th>Redução (p.p.)</th></tr></thead>
-            <tbody>
-              {rules.map((r, i) => <tr key={r.qty}><td>{r.qty}</td><td><input aria-label={`Redução para ${r.qty} unidades`} inputMode="decimal" value={r.reduction} onChange={e => updateRule(i, e.target.value)} onBlur={() => formatRule(i)} /></td></tr>)}
-            </tbody>
-          </table>
+          <table className="compact horizontalRules"><tbody><tr><th>Quantidade</th>{rules.map(r=><th key={r.qty}>{r.qty}</th>)}</tr><tr><th>Redução (p.p.)</th>{rules.map((r,i)=><td key={r.qty}><input aria-label={`Redução para ${r.qty} unidades`} inputMode="decimal" value={r.reduction} onChange={e=>updateRule(i,e.target.value)} onBlur={()=>formatRule(i)} /></td>)}</tr></tbody></table>
           <button className="primary" disabled>Salvar regras</button>
         </div>}
       </div>}
