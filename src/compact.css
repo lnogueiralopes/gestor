@@ -99,3 +99,4 @@ table,input,textarea,select{font-family:Montserrat,Arial,sans-serif;font-variant
 .breadcrumbs strong[aria-current="page"]{font-weight:700}
 .tableWrap{background:#f4f6f1!important;border:1px solid #d7ded1;border-radius:14px!important;padding:10px!important;overflow:auto}.tableWrap table{background:#dde5d8;border-radius:2px;border-collapse:collapse;margin:0;width:100%;overflow:hidden}.tableWrap th{background:#d3ddcf!important}.tableWrap td,.tableWrap th{padding:13px 16px}.tableWrap tbody tr:nth-child(even){background:#e8eee4}.tableWrap tbody tr:hover{background:#d7e4d0}
 .pricingMenu{margin-bottom:14px}.pricingMenu + .card{margin-top:2px}
+.priceTableGroup .addAction,.priceTableGroups .addAction{background:#1d241b;color:#eef3e6;border-color:#1d241b}.priceTableGroup .addAction:hover{background:#303d29;color:#b8ee20}.priceTableGroup .infoButton{font-size:13px;opacity:.75;padding:2px 6px}.priceTableGroup .infoButton:hover{opacity:1}
