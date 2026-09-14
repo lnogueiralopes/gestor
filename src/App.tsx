@@ -176,7 +176,7 @@ function Pricing() {
       {section==='params' && <div className="pricingEditorButtons"><button type="button" className="roundAction" title="Premissas gerais" aria-label="Premissas gerais" onClick={() => setShowAssumptions(value => !value)}>⚙</button><button type="button" className="roundAction" title="Desconto progressivo e kit" aria-label="Desconto progressivo e kit" onClick={() => setShowKitRules(value => !value)}>▦</button></div>}
       {section==='params' && (showAssumptions || showKitRules) && <div className="grid2">
         {showAssumptions && <div className="card">
-          <h3>Premissas gerais</h3>
+          
           <div className="formRows">
             {params.map((p, i) => (
               <label key={p.key}><span>{p.label}</span><div><input value={p.value} onChange={e => updateParam(i, e.target.value)} /><b>{p.suffix}</b></div></label>
