@@ -49,8 +49,18 @@ export async function mercadoLivre(request: Request, env: Env): Promise<Response
     const user=await admin(env,request.headers.get('Authorization'));
     if(!user) return reply({error:'Somente administradores ativos podem conectar contas.'},403);
     if(url.pathname.endsWith('/status') && request.method==='GET') {
-      const response=await database(env,'ml_connections?select=seller_id,expires_at,updated_at');
-      return response.ok ? reply({connections:await response.json()}) : reply({error:'Prepare as tabelas da integração no Supabase.'},503);
+      const response=await database(env,'ml_connections?select=seller_id,expires_at,updated_at,access_token');
+      if(!response.ok) return reply({error:'Prepare as tabelas da integração no Supabase.'},503);
+      const rows=await response.json() as {seller_id:string;expires_at:string;updated_at?:string;access_token:string}[];
+      const connections=await Promise.all(rows.map(async row=>{
+        let account_name='Conta Mercado Livre';
+        try {
+          const profile=await fetch(`https://api.mercadolibre.com/users/${encodeURIComponent(row.seller_id)}`,{headers:{Authorization:`Bearer ${row.access_token}`}});
+          if(profile.ok){const data=await profile.json() as {nickname?:string};if(data.nickname) account_name=data.nickname;}
+        } catch {}
+        return {seller_id:row.seller_id,account_name,expires_at:row.expires_at,updated_at:row.updated_at};
+      }));
+      return reply({connections});
     }
     if(!url.pathname.endsWith('/connect') || request.method!=='POST') return reply({error:'Rota inválida.'},404);
     if(request.headers.get('Origin')!==url.origin) return reply({error:'Origem inválida.'},403);

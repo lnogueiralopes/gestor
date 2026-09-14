@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
-type Connection = { seller_id: string; expires_at: string; updated_at?: string };
+type Connection = { seller_id: string; account_name?: string; expires_at: string; updated_at?: string };
 export default function Marketplace() {
  const [connections,setConnections]=useState<Connection[]>([]);
  const [loading,setLoading]=useState(true), [connecting,setConnecting]=useState(false), [error,setError]=useState('');
@@ -26,9 +26,9 @@ export default function Marketplace() {
   </div></header>
   {error&&<p role="alert">{error}</p>}
   <p role="status">{loading?'Carregando conexões…':connecting?'Abrindo Mercado Livre…':outcome==='connected'&&connections.length?'Conta autorizada e salva.':outcome==='cancelled'?'Autorização cancelada.':outcome==='error'?'A autorização não foi salva. Tente conectar novamente.':''}</p>
-  <div className="card tableWrap"><table><thead><tr><th>Marketplace</th><th>Conta / ID vendedor</th><th>Conexão</th><th>Última autorização</th><th>Ações</th></tr></thead><tbody>
-   {connections.map(account=><tr key={account.seller_id}><td>Mercado Livre</td><td>{account.seller_id}</td><td>{Date.parse(account.expires_at)>Date.now()?'Conectada':'Salva · acesso expirado'}</td><td>{account.updated_at?new Date(account.updated_at).toLocaleString('pt-BR'):'—'}</td><td><button className="tableAction" type="button" title="Autorizar novamente no Mercado Livre" aria-label={'Autorizar novamente a conta '+account.seller_id} disabled={connecting} onClick={connect}>↻</button></td></tr>)}
-   {!loading&&!error&&!connections.length&&<tr><td colSpan={5}>Nenhuma conexão salva. Use + para adicionar uma conta.</td></tr>}
+  <div className="card tableWrap"><table><thead><tr><th>Marketplace</th><th>Nome da conta</th><th>ID vendedor</th><th>Conexão</th><th>Última autorização</th><th>Ações</th></tr></thead><tbody>
+   {connections.map(account=><tr key={account.seller_id}><td>Mercado Livre</td><td><strong>{account.account_name||'Conta Mercado Livre'}</strong></td><td>{account.seller_id}</td><td>{Date.parse(account.expires_at)>Date.now()?'Conectada':'Salva · acesso expirado'}</td><td>{account.updated_at?new Date(account.updated_at).toLocaleString('pt-BR'):'—'}</td><td><button className="tableAction" type="button" title="Autorizar novamente no Mercado Livre" aria-label={'Autorizar novamente a conta '+(account.account_name||account.seller_id)} disabled={connecting} onClick={connect}>↻</button></td></tr>)}
+   {!loading&&!error&&!connections.length&&<tr><td colSpan={6}>Nenhuma conexão salva. Use + para adicionar uma conta.</td></tr>}
   </tbody></table></div>
  </section>;
 }
