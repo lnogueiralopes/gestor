@@ -145,20 +145,21 @@ function Pricing() {
   const [matrixRows,setMatrixRows]=useState<any[]>([]);
   const [dbTables,setDbTables]=useState<any[]>([]);
   const [costProducts,setCostProducts]=useState<any[]>([]);
+  const [costProductsLoaded,setCostProductsLoaded]=useState(false);
   const [connectedAccounts,setConnectedAccounts]=useState<any[]>([]);
   useEffect(()=>{if(supabase)supabase.from('pricing_tables').select('*').order('channel').order('name').then(({data})=>{if(data)setDbTables(data.map(t=>({...t,adjustment:Number(t.adjustment_percent||0)})));});},[]);
   useEffect(()=>{if(!supabase)return;supabase.auth.getSession().then(async({data})=>{if(!data.session)return;const response=await fetch('/api/marketplaces/mercadolivre/status',{headers:{Authorization:'Bearer '+data.session.access_token}});const result=await response.json();if(Array.isArray(result.connections))setConnectedAccounts(result.connections.map((c:any)=>({id:'ml-'+c.seller_id,name:c.account_name||c.seller_id,channel:'Mercado Livre',priceTable:'ml-classic'})));});},[]);
   const accountList = connectedAccounts.length ? connectedAccounts : accounts.filter(a=>a.channel==='Mercado Livre');
   const activeTables = dbTables.length ? dbTables : priceTables;
   useEffect(()=>{if(supabase)supabase.from('pricing_product_matrix').select('*').order('name').then(({data})=>{if(data)setMatrixRows(data);});},[]);
-  useEffect(()=>{if(supabase)supabase.from('products').select('*').order('name').then(({data})=>{if(data)setCostProducts(data);});},[]);
+  useEffect(()=>{if(!supabase){setCostProductsLoaded(true);return;} supabase.from('products').select('*').order('name').then(({data})=>{if(data)setCostProducts(data);}).finally(()=>setCostProductsLoaded(true));},[]);
   const section = location.pathname === '/precificador/calculo' ? 'calc' : location.pathname.includes('tabelas-conta') ? 'accounts' : location.pathname.includes('tabelas-preco') ? 'tables' : location.pathname.includes('parametros') ? 'params' : location.pathname.includes('custos') ? 'costs' : location.pathname.includes('frete') ? 'freight' : location.pathname.includes('tarifas') ? 'tariffs' : location.pathname.includes('matriz') ? 'matrix' : 'log';
   const calcModule = location.pathname.includes('/calculo/frete') ? 'freight' : location.pathname.includes('/calculo/tarifas') ? 'tariffs' : 'matrix';
   const [logPeriod, setLogPeriod] = useState('7');
   const tableFor = (account: any) => activeTables.filter(table => table.channel === account.channel);
   const downloadCostModel = () => {
     const familyId = costFamily === 'Bebidas' ? 1 : costFamily === 'Suplementos' ? 2 : costFamily === 'Fertilizantes' ? 3 : null;
-    const rows = (costProducts.length ? costProducts : products).filter((p:any)=>familyId===null || Number(p.family_id??1)===familyId);
+    const rows = (costProductsLoaded ? costProducts : []).filter((p:any)=>familyId===null || Number(p.family_id??1)===familyId);
     const headers = ['EAN','SKU','Produto','Família','Custo atual','Margem atual (%)','Novo custo','Nova margem (%)'];
     const familyName = (id:any) => ({1:'Bebidas',2:'Suplementos',3:'Fertilizantes'} as any)[Number(id)] || '';
     const csv = [headers,...rows.map((p:any)=>[p.ean||'',p.sku||p.ean||'',p.name||'',familyName(p.family_id),p.unit_cost??p.cost??'',p.target_margin??p.margin??'','',''])].map(row=>row.map((v:any)=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
