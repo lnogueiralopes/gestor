@@ -91,3 +91,4 @@ table,input,textarea,select{font-family:Montserrat,Arial,sans-serif;font-variant
 }
 
 .sectionHeading{display:flex;align-items:center;justify-content:space-between;gap:12px}.sectionHeading h3{margin-bottom:4px}
+@media(max-width:850px){.topNavigation{position:relative}.topNavigation>.rocketWordmark{position:absolute;left:50%;top:8px;transform:translateX(-50%);order:0}.topNavigation>.accountCircle{order:1;margin-left:auto}.topNavigation>.signOutIcon{order:2}.topNavigation>.topLinks{order:3}}
