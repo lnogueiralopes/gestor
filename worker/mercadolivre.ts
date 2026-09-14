@@ -36,12 +36,13 @@ export async function mercadoLivre(request: Request, env: Env): Promise<Response
         console.error('Mercado Livre OAuth: token exchange failed', {status:token.status});
         return redirect('error');
       }
-      const data=await token.json() as {access_token:string;refresh_token:string;expires_in:number;user_id:number};
-      if(!data.access_token || !data.refresh_token || !data.user_id || !Number.isFinite(data.expires_in)) {
-        console.error('Mercado Livre OAuth: token response missing required fields');
+      const data=await token.json() as {access_token?:string;refresh_token?:string;expires_in?:number|string;user_id?:number|string};
+      const expiresIn=Number(data.expires_in);
+      if(!data.access_token || !data.refresh_token || !data.user_id || !Number.isFinite(expiresIn)) {
+        console.error('Mercado Livre OAuth: token response missing required fields', {fields:Object.keys(data), types:Object.fromEntries(Object.entries(data).map(([key,value])=>[key,typeof value]))});
         return redirect('error');
       }
-      const saved=await database(env,'ml_connections?on_conflict=seller_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify({seller_id:String(data.user_id),connected_by:states[0].user_id,access_token:data.access_token,refresh_token:data.refresh_token,expires_at:new Date(Date.now()+data.expires_in*1000).toISOString(),updated_at:new Date().toISOString()})});
+      const saved=await database(env,'ml_connections?on_conflict=seller_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:JSON.stringify({seller_id:String(data.user_id),connected_by:states[0].user_id,access_token:data.access_token,refresh_token:data.refresh_token,expires_at:new Date(Date.now()+expiresIn*1000).toISOString(),updated_at:new Date().toISOString()})});
       if(!saved.ok) console.error('Mercado Livre OAuth: connection save failed', {status:saved.status});
       return redirect(saved.ok?'connected':'error');
     }
@@ -59,7 +60,7 @@ export async function mercadoLivre(request: Request, env: Env): Promise<Response
     const saved=await database(env,'ml_oauth_states',{method:'POST',body:JSON.stringify({state,user_id:user,verifier,expires_at:new Date(Date.now()+600000).toISOString()})});
     if(!saved.ok) return reply({error:'Prepare as tabelas da integração no Supabase.'},503);
     const target=new URL('https://auth.mercadolivre.com.br/authorization');
-    target.search=new URLSearchParams({response_type:'code',client_id:env.ML_CLIENT_ID,redirect_uri:env.ML_REDIRECT_URI,state,code_challenge:challenge,code_challenge_method:'S256'}).toString();
+    target.search=new URLSearchParams({response_type:'code',client_id:env.ML_CLIENT_ID,redirect_uri:env.ML_REDIRECT_URI,state,scope:'offline_access read write',code_challenge:challenge,code_challenge_method:'S256'}).toString();
     const result=reply({url:target.href});
     result.headers.set('Set-Cookie',`ml_oauth=${state}; Path=/api/marketplaces/mercadolivre; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
     return result;
