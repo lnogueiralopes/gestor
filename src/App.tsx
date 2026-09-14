@@ -192,13 +192,7 @@ function Pricing() {
           <button className="primary" disabled>Salvar regras</button>
         </div>}
       </div>}
-      {section==='accounts' && <div className="card priceTableConfig">
-        <div className="sectionHeading"><div><h3>Tabelas / marketplace</h3><p className="muted">Selecione a tabela de preço usada em cada conta associada.</p></div><button className="roundAction addAction" type="button" title="Adicionar tabela de preço" aria-label="Adicionar tabela de preço" disabled>+</button></div>
-        <div className="formRows">
-          {accounts.map(account => <label key={account.id}><span><strong>{account.channel}</strong><small>Nickname: {account.name}</small></span><select value={accountTables[account.id]} onChange={e => setAccountTables(current => ({...current,[account.id]:e.target.value}))}>{tableFor(account).map(table => <option key={table.id} value={table.id}>{table.name}</option>)}</select></label>)}
-        </div>
-        <button className="primary" disabled>Salvar tabelas por conta</button>
-      </div>}
+      {section==='accounts' && <div className="accountTableGroups">{Array.from(new Set(accounts.map(a=>a.channel))).map(channel=>{const channelAccounts=accounts.filter(a=>a.channel===channel);return <div className="card accountTableGroup" key={channel}><div className="sectionHeading"><h3>{channel}</h3></div><div className="accountTableHeader"><span>Conta</span><span>Tabela</span></div>{channelAccounts.map(account=><div className="accountTableRow" key={account.id}><strong>{account.name}</strong><select aria-label={`Tabela da conta ${account.name}`} value={accountTables[account.id]} onChange={e=>setAccountTables(current=>({...current,[account.id]:e.target.value}))}>{tableFor(account).map(table=><option key={table.id} value={table.id}>{table.name}</option>)}</select></div>)}</div>})}</div>}
       {section==='tables' && <div className="priceTableGroups">{['Mercado Livre','Shopee','Ruta Direct Shop'].map(channel=>{const ts=priceTables.filter(t=>t.channel===channel);return <div className="card priceTableGroup" key={channel}><div className="sectionHeading"><h3>{channel}</h3><button className="roundAction addAction" type="button" title="Cadastrar tabela" aria-label="Cadastrar tabela" disabled>+</button></div><table><tbody>{ts.map(t=><tr key={t.id}><td>{t.name}</td><td><button className="infoButton" type="button" title={t.adjustment?'Preço com gordura para compensar 10% de desconto e preservar o resultado planejado.':'Preço calculado com custo, margem e premissas para entregar o resultado planejado.'} aria-label="Detalhes do cálculo">ⓘ</button></td></tr>)}</tbody></table></div>})}</div>}</>
   );
 }
