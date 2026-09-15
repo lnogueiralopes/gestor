@@ -136,7 +136,7 @@ function Matrix({ kind }: MatrixProps) {
 function Pricing() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [params, setParams] = useState(pricingParameters);
+  const [params, setParams] = useState(pricingParameters.filter(p=>p.key!=='packaging'));
   const [rules, setRules] = useState(kitRules);
   const [showAssumptions, setShowAssumptions] = useState(false);
   const [showKitRules, setShowKitRules] = useState(false);
@@ -177,7 +177,7 @@ function Pricing() {
     for(let offset=0;;offset+=500){const {data,error}=await supabase.from('products').select('*').order('id').range(offset,offset+499);if(error){setRecalcStatus(error.message);return;}products.push(...(data||[]));if(!data||data.length<500)break;}
     setMatrixRows(rows.map(row=>({...products.find(p=>p.id===row.product_id),...row,id:row.product_id})));
   };
-  useEffect(()=>{void loadMatrix();if(supabase)supabase.from('pricing_recalculation_requests').select('*').order('requested_at',{ascending:false}).limit(1).then(({data})=>{if(data?.[0]?.scope?.tasks)setRecalcJob(data[0]);});},[]);
+  useEffect(()=>{void loadMatrix();if(supabase)supabase.from('pricing_recalculation_requests').select('*').contains('scope',{requested_from:'/precificador'}).not('scope->total','is',null).order('requested_at',{ascending:false}).limit(1).then(({data})=>{if(data?.[0]?.scope?.tasks)setRecalcJob(data[0]);});},[]);
   useEffect(()=>{const client=supabase;if(!client){setCostProductsLoaded(true);return;} client.from('products').select('*').order('name').then(({data})=>{if(data)setCostProducts(data);setCostProductsLoaded(true);});},[]);
   useEffect(()=>{const client=supabase;if(client)client.from('pricing_logs').select('*').order('created_at',{ascending:false}).limit(50).then(async({data})=>{if(data){setPricingLogs(data);const ids=[...new Set(data.map((l:any)=>l.user_id).filter(Boolean))];if(ids.length){const {data:profiles}=await client.from('profiles').select('id,full_name').in('id',ids);if(profiles)setLogUserNames(Object.fromEntries(profiles.map((p:any)=>[p.id,p.full_name||'Usuário'])));}}});},[]);
   useEffect(()=>{if(!supabase)return; supabase.from('pricing_engine_freight_rules').select('*,product_families(name)').eq('channel','Mercado Livre').order('max_weight_kg').then(({data})=>{if(data)setFreightRows(data);}); supabase.from('marketplace_fee_rules').select('*,product_families(name)').eq('active',true).order('channel').order('min_price').then(({data})=>{if(data)setFeeRows(data);});},[]);

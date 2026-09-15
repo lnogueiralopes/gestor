@@ -15,15 +15,19 @@ const unique = (rows:Row[], fields:string[], label:string) => {
   if(new Set(rows.map(r=>JSON.stringify(fields.map(f=>r[f])))).size!==1) throw new Error(`Há regras conflitantes de ${label}.`);
   return rows[0];
 };
-
-/** Select a consistent price band, including discontinuous fixed fees. */
-export function calculate(p:Row,t:Row,modality:string|null,parameters:Row[],fees:Row[],fixed:Row[],packaging:number,logistics:Row|null) {
+function globalCosts(parameters:Row[]) {
   const globals:Row={};
   for(const code of ['tax_percent','safety_reserve_percent','operational_cost']) {
     const row=parameters.find(r=>r.code===code);
     if(!row?.confirmed_at) throw new Error(`Confirme ${code==='tax_percent'?'imposto':code==='safety_reserve_percent'?'reserva de segurança':'custo operacional'} em Parâmetros e salve.`);
     globals[code]=required(row.value,code);
   }
+  return globals;
+}
+
+/** Select a consistent price band, including discontinuous fixed fees. */
+export function calculate(p:Row,t:Row,modality:string|null,parameters:Row[],fees:Row[],fixed:Row[],packaging:number,logistics:Row|null) {
+  const globals=globalCosts(parameters);
   if(!p.family_id) throw new Error('Produto sem família.');
   if(required(p.unit_cost,'custo do produto')<=0) throw new Error('O custo do produto deve ser maior que zero.');
   const applicable=fees.filter(r=>r.channel===t.channel && (t.channel==='Shopee'?r.family_id==null:r.family_id===p.family_id && r.listing_type===modality));
@@ -78,6 +82,7 @@ export async function pricing(request:Request,env:Env):Promise<Response>{
     if(request.method!=='POST')return response({error:'Método inválido.'},405);
     const body=await request.json() as Row;
     if(!body.job_id){
+      globalCosts(await db('pricing_parameters?scope=eq.global'));
       const products=await all('products','&is_active=eq.true');
       const tables=await all('pricing_tables');
       const tasks=products.flatMap(p=>tables.filter(t=>['Mercado Livre','Shopee'].includes(t.channel)).flatMap(t=>(t.channel==='Mercado Livre'?['classic','premium']:[null]).map(m=>({product:p.id,table:t.id,modality:m}))));
@@ -104,6 +109,7 @@ export async function pricing(request:Request,env:Env):Promise<Response>{
           if(![task.product,task.table].every(id=>/^[0-9a-f-]{36}$/i.test(id)))throw new Error('Identificador de produto ou tabela inválido.');
           const [[p],[t],parameters,fees,fixed,family]=await Promise.all([db(`products?id=eq.${task.product}&is_active=eq.true`),db(`pricing_tables?id=eq.${task.table}`),db('pricing_parameters?scope=eq.global'),all('pricing_engine_fee_rules'),all('pricing_fixed_fee_rules','&active=eq.true'),db('pricing_family_parameters?select=*')]);
           if(!p||!t)throw new Error('Produto ou tabela removido ou inativo.');
+          globalCosts(parameters);
           const packaging=required(family.find(r=>r.family_id===p.family_id)?.packaging_unit_cost??0,'embalagem');
           let logistics:Row|null=null;
           if(t.channel==='Mercado Livre'){
