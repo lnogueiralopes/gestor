@@ -48,6 +48,17 @@ export async function mercadoLivre(request: Request, env: Env): Promise<Response
     }
     const user=await admin(env,request.headers.get('Authorization'));
     if(!user) return reply({error:'Somente administradores ativos podem conectar contas.'},403);
+    if(url.pathname.endsWith('/shipping-quote') && request.method==='POST') {
+      const body=await request.json() as {seller_id?:string;dimensions?:string;item_price?:number;listing_type_id?:string;mode?:string;logistic_type?:string;condition?:string;free_shipping?:boolean};
+      const connectionPath=body.seller_id?`ml_connections?seller_id=eq.${encodeURIComponent(body.seller_id)}&select=seller_id,access_token`: 'ml_connections?select=seller_id,access_token&limit=1';
+      const found=await database(env,connectionPath); const connections=found.ok?await found.json() as {seller_id:string;access_token:string}[]:[];
+      if(!connections.length)return reply({error:'Nenhuma conta Mercado Livre conectada.'},404);
+      if(!body.dimensions||!Number.isFinite(Number(body.item_price)))return reply({error:'Informe dimensões e preço para simular o frete.'},400);
+      const q=new URLSearchParams({dimensions:body.dimensions,item_price:String(body.item_price),listing_type_id:body.listing_type_id||'gold_special',mode:body.mode||'me2',condition:body.condition||'new',logistic_type:body.logistic_type||'drop_off',free_shipping:String(body.free_shipping??true),verbose:'true'});
+      const quote=await fetch(`https://api.mercadolibre.com/users/${encodeURIComponent(connections[0].seller_id)}/shipping_options/free?${q}`,{headers:{Authorization:`Bearer ${connections[0].access_token}`,'x-format-new':'true'}});
+      const data=await quote.json(); if(!quote.ok)return reply({error:'Mercado Livre não retornou uma cotação.',details:data},502);
+      return reply({seller_id:connections[0].seller_id,source:'mercadolivre.shipping_options',quote:data});
+    }
     if(url.pathname.endsWith('/status') && request.method==='GET') {
       const response=await database(env,'ml_connections?select=seller_id,expires_at,updated_at,access_token');
       if(!response.ok) return reply({error:'Prepare as tabelas da integração no Supabase.'},503);
