@@ -120,7 +120,15 @@ table,input,textarea,select{font-family:Montserrat,Arial,sans-serif;font-variant
 .tableWrap td[title]{text-align:center;font-size:16px}.tableWrap th[aria-label="Família"]{width:34px}
 .tableWrap td[title]{font-size:11px!important}.tableWrap td[title]:first-letter{font-size:14px}
 .calculationButtons{width:100%;box-sizing:border-box}.calculationButtons .pricingSubmenu{margin:0;align-items:center}.calculationButtons .secondary{margin-left:4px}
-.productCatalogTable { width:100%; font-size:12px; }
+.productCatalogTable { width:100%; min-width:1050px; table-layout:fixed; font-size:12px; }
+.productCatalogTable th:nth-child(1) { width:46px; }
+.productCatalogTable th:nth-child(2) { width:126px; }
+.productCatalogTable th:nth-child(7) { width:102px; }
+.productCatalogTable th:nth-child(8) { width:56px; }
+.productCatalogTable th:nth-child(9) { width:184px; }
+.productCatalogTable th:nth-child(10) { width:55px; }
+.productCatalogTable .imageIcons { gap:3px; }
+.productCatalogTable .imageIcon { width:24px; height:24px; min-width:24px; padding:3px; }
 .productCatalogTable th,.productCatalogTable td { padding:8px 7px; }
 .productCatalogTable .catalogCellText { display:block; max-width:18ch; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .productCatalogTable th { white-space:nowrap; }
