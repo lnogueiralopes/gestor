@@ -33,8 +33,9 @@ export function solvePricing(input: PricingInput): PricingResult {
   const adjustedCost=originalCost*(1+n(input.safetyReservePercent)/100);
   const fixed= n(input.fixedFee)+n(input.freightValue)+n(input.additionalFixedCost)+n(input.otherCosts)+n(input.packagingUnitCost)*q+n(input.operationalCost);
   const variable=(n(input.taxPercent)+n(input.commissionPercent)+n(input.additionalCommissionPercent))/100;
-  const netFactor=Math.max(0.0001,(1-variable)*(1-n(input.discountPercent)/100));
-  let announced=Math.max(0,(targetResult+adjustedCost+fixed)/netFactor);
+  if(variable>=1 || n(input.discountPercent)>=100 || Object.values(input).some(v=>typeof v==='number' && (!Number.isFinite(v)||v<0)) || input.quantity<1 || !Number.isInteger(input.quantity)) throw new Error('Parâmetros de cálculo inválidos.');
+  const netFactor=(1-variable)*(1-n(input.discountPercent)/100);
+  let announced=Math.ceil((targetResult+adjustedCost+fixed)/netFactor*100)/100;
   // Cent rounding can move the result below target; raise by one cent until safe.
   let effective=Number((announced*(1-n(input.discountPercent)/100)).toFixed(2));
   let result=effective*(1-variable)-adjustedCost-fixed;

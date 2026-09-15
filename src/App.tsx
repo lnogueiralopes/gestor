@@ -153,6 +153,8 @@ function Pricing() {
   const [uploadActivities,setUploadActivities]=useState<string[]>([]);
   const [paramStatus,setParamStatus]=useState('');
   const [recalcStatus,setRecalcStatus]=useState('');
+  const [recalcBusy,setRecalcBusy]=useState(false);
+  const [recalcJob,setRecalcJob]=useState<any>(null);
   const [pricingLogs,setPricingLogs]=useState<any[]>([]);
   const [logUserNames,setLogUserNames]=useState<Record<string,string>>({});
   const [freightRows,setFreightRows]=useState<any[]>([]);
@@ -163,7 +165,19 @@ function Pricing() {
   useEffect(()=>{if(!supabase)return;supabase.auth.getSession().then(async({data})=>{if(!data.session)return;const response=await fetch('/api/marketplaces/mercadolivre/status',{headers:{Authorization:'Bearer '+data.session.access_token}});const result=await response.json();if(Array.isArray(result.connections))setConnectedAccounts(result.connections.map((c:any)=>({id:'ml-'+c.seller_id,name:c.account_name||c.seller_id,channel:'Mercado Livre',priceTable:'ml-classic'})));});},[]);
   const accountList = connectedAccounts.length ? connectedAccounts : accounts.filter(a=>a.channel==='Mercado Livre');
   const activeTables = dbTables.length ? dbTables : priceTables;
-  useEffect(()=>{if(supabase)supabase.from('pricing_engine_matrix').select('*').order('product_id').then(({data})=>{if(data)setMatrixRows(data);});},[]);
+  const loadMatrix=async()=>{
+    if(!supabase)return;
+    const rows:any[]=[];
+    for(let offset=0;;offset+=500){
+      const {data,error}=await supabase.from('pricing_engine_matrix').select('*').order('product_id').order('pricing_table_id').order('listing_type').range(offset,offset+499);
+      if(error){setRecalcStatus(error.message);return;}
+      rows.push(...(data||[]));if(!data||data.length<500)break;
+    }
+    const products:any[]=[];
+    for(let offset=0;;offset+=500){const {data,error}=await supabase.from('products').select('*').order('id').range(offset,offset+499);if(error){setRecalcStatus(error.message);return;}products.push(...(data||[]));if(!data||data.length<500)break;}
+    setMatrixRows(rows.map(row=>({...products.find(p=>p.id===row.product_id),...row,id:row.product_id})));
+  };
+  useEffect(()=>{void loadMatrix();if(supabase)supabase.from('pricing_recalculation_requests').select('*').order('requested_at',{ascending:false}).limit(1).then(({data})=>{if(data?.[0]?.scope?.tasks)setRecalcJob(data[0]);});},[]);
   useEffect(()=>{const client=supabase;if(!client){setCostProductsLoaded(true);return;} client.from('products').select('*').order('name').then(({data})=>{if(data)setCostProducts(data);setCostProductsLoaded(true);});},[]);
   useEffect(()=>{const client=supabase;if(client)client.from('pricing_logs').select('*').order('created_at',{ascending:false}).limit(50).then(async({data})=>{if(data){setPricingLogs(data);const ids=[...new Set(data.map((l:any)=>l.user_id).filter(Boolean))];if(ids.length){const {data:profiles}=await client.from('profiles').select('id,full_name').in('id',ids);if(profiles)setLogUserNames(Object.fromEntries(profiles.map((p:any)=>[p.id,p.full_name||'Usuário'])));}}});},[]);
   useEffect(()=>{if(!supabase)return; supabase.from('pricing_engine_freight_rules').select('*,product_families(name)').eq('channel','Mercado Livre').order('max_weight_kg').then(({data})=>{if(data)setFreightRows(data);}); supabase.from('marketplace_fee_rules').select('*,product_families(name)').eq('active',true).order('channel').order('min_price').then(({data})=>{if(data)setFeeRows(data);});},[]);
@@ -221,21 +235,57 @@ function Pricing() {
   const saveAssumptions = async () => {
     if(!supabase){setParamStatus('Parâmetros prontos para salvar quando o banco estiver conectado.');return;}
     const codeFor=(key:string)=>key==='tax'?'tax_percent':key==='safety'?'safety_reserve_percent':'operational_cost';
-    const payload=params.filter(p=>['tax','safety','operational'].includes(p.key)).map(p=>({code:codeFor(p.key),value:Number(p.value.replace(',','.'))||0,updated_at:new Date().toISOString()}));
-    const {error}=await supabase.from('pricing_parameters').upsert(payload,{onConflict:'code'});
+    const payload=params.filter(p=>['tax','safety','operational'].includes(p.key)).map(p=>({code:codeFor(p.key),value:Number(p.value.replace(',','.')),updated_at:new Date().toISOString(),confirmed_at:new Date().toISOString()}));
+    if(payload.some(p=>!Number.isFinite(p.value)||p.value<0||(p.code==='tax_percent'&&p.value>=100))){setParamStatus('Informe parâmetros válidos.');return;}
+    const results=await Promise.all(payload.map(({code,...values})=>supabase!.from('pricing_parameters').update(values).eq('code',code).select('code')));
+    const error=results.find(r=>r.error||!r.data?.length);
     setParamStatus(error?'Não foi possível salvar os parâmetros.':'Parâmetros salvos.');
   };
   const requestRecalculation = async (reason:'manual_all'|'freight_rules') => {
-    if(!supabase){setRecalcStatus('Banco não conectado.');return;}
-    const {error}=await supabase.from('pricing_recalculation_requests').insert({reason,scope:{requested_from:'/precificador'}});
-    setRecalcStatus(error?'Não foi possível agendar o recálculo.':reason==='freight_rules'?'Atualização de frete agendada.':'Recálculo geral agendado.');
+    if(!supabase||recalcBusy)return;
+    setRecalcBusy(true);
+    try{
+      const call=async(body:any)=>{
+        const {data}=await supabase!.auth.getSession();
+        if(!data.session)throw new Error('Entre novamente no sistema.');
+        const res=await fetch('/api/pricing/recalculate',{method:'POST',headers:{Authorization:'Bearer '+data.session.access_token,'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const result=await res.json();if(!res.ok)throw new Error(result.error||'Falha no processamento.');return result;
+      };
+      setRecalcStatus('Preparando produtos e tabelas…');
+      let job=['pending','running'].includes(recalcJob?.status)&&recalcJob.reason===reason?recalcJob:await call({reason});
+      setRecalcJob(job);
+      while(['pending','running'].includes(job.status)){
+        job=await call({job_id:job.id});setRecalcJob(job);
+        const s=job.scope;setRecalcStatus(`${s.total?Math.floor(s.processed/s.total*100):100}% — ${s.generated} preços gerados; ${s.blocked.length} bloqueados. Mantenha esta tela aberta durante o processamento.`);
+        if(job.status==='running')await new Promise(resolve=>window.setTimeout(resolve,5000));
+      }
+      if(job.status==='failed')throw new Error(job.error_message);
+      if(job.status==='running')throw new Error('Esta solicitação já está sendo processada. Aguarde e atualize a página.');
+      setRecalcStatus(`Concluído: ${job.scope.generated} preços gerados; ${job.scope.blocked.length} bloqueados por pendências.`);
+    }catch(error){setRecalcStatus(error instanceof Error?error.message:'Falha no processamento.');}
+    finally{setRecalcBusy(false);await loadMatrix();}
   };
-  const calculationTicket = (product:any, name:string) => {
-    const marketplace=/shopee|normal/i.test(name)&&!/(clássico|premium)/i.test(name)?'Shopee':'Mercado Livre';
-    const modality=marketplace==='Mercado Livre'?(/premium/i.test(name)?'Premium':'Clássico'):'—';
-    const money=(v:any)=>`R$ ${Number(v||0).toFixed(2).replace('.',',')}`;
-    const tax=params.find(p=>p.key==='tax')?.value||'0,00'; const operational=params.find(p=>p.key==='operational')?.value||'0,00'; const reserve=params.find(p=>p.key==='safety')?.value||'0,00';
-    return `MEMÓRIA DE CÁLCULO\n${marketplace} / ${modality} / Tabela: ${name}\n${'─'.repeat(50)}\nPRODUTO\n${product.name||'—'}\nCusto unitário: ${money(product.unit_cost)}\nMargem desejada: ${product.target_margin||0}%\n\nCUSTOS E PARÂMETROS\nImposto: ${tax}%\nReserva de segurança: ${reserve}%\nCusto operacional por venda: ${money(operational)}\nComissão: ${product.commission_percent||0}%\nTarifa fixa: ${money(product.commission_fixed_fee)}\nFrete considerado: ${money(product.freight_value)}\n\nRESULTADO\nPreço anunciado: ${money(product.calculated_price)}\nResultado alvo: ${money(product.target_result)}\nResultado calculado: ${money(product.calculated_result)}\n\n${'─'.repeat(50)}\nDIMENSÕES DO PACOTE / LOGÍSTICA\nComprimento × largura × altura: ${product.length_cm||'—'} × ${product.width_cm||'—'} × ${product.height_cm||'—'} cm\nPeso: ${product.weight_kg||'—'} kg\nOrigem do frete: ${marketplace==='Mercado Livre'?'Cotação Mercado Livre':'Não aplicável'}`;
+  const calculationTicket = (row:any) => {
+    const d=row.calculation_details;
+    if(!d)return 'Preço indisponível. Execute o recálculo e confira as pendências.';
+    const money=(value:any)=>Number(value).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const lines=[row.channel+' / '+(row.listing_type==='premium'?'Premium':row.listing_type==='classic'?'Clássico':'Sem modalidade')+' / Tabela: '+row.pricing_table_name,d.product?.name||row.name,'',
+      'Custo original: '+money(d.original_cost),
+      'Margem alvo: '+d.target_margin_percent+'% → '+money(d.target_result),
+      'Reserva: '+d.safety_reserve_percent+'% → '+money(d.safety_reserve_value),
+      'Custo ajustado: '+money(d.adjusted_cost),
+      'Embalagem: '+money(d.packaging_total),'Operacional: '+money(d.operational_cost),
+      'Imposto: '+d.tax_percent+'% → '+money(d.tax_value),
+      'Comissão: '+d.commission_percent+'% → '+money(d.commission_value),
+      'Comissão adicional: '+d.additional_commission_percent+'% → '+money(d.additional_commission_value),
+      'Taxa fixa: '+money(d.fixed_fee),'Frete: '+money(d.freight_value),
+      'Custo adicional: '+money(d.additional_fixed_cost),'Outros custos: '+money(d.other_costs),
+      'Acréscimo: '+d.markup_percent+'% → '+money(d.markup_value),
+      'Desconto: '+d.discount_percent+'% → '+money(d.discount_value),'',
+      'Preço anunciado: '+money(d.announced_price),'Preço efetivo: '+money(d.effective_price),
+      'Resultado alvo: '+money(d.target_result),'Resultado calculado: '+money(d.calculated_result)];
+    if(d.logistics)lines.push('','PACOTE / LOGÍSTICA',d.logistics.width_cm+' × '+d.logistics.length_cm+' × '+d.logistics.height_cm+' cm | '+d.logistics.weight_kg+' kg','Modelo: '+d.logistics.model,'Fonte: '+d.logistics.source,'Conta: '+d.logistics.seller_id,'Cotação: '+d.logistics.quoted_at,'Frete bruto: '+money(d.logistics.freight_table_value),'Desconto do frete: '+money(d.logistics.freight_discount_value),'Frete líquido: '+money(d.logistics.freight_net_value));
+    return lines.join('\n');
   };
   const shopeeUniqueFees = feeRows.filter(r=>r.channel==='Shopee').filter((r,i,a)=>i===a.findIndex(x=>Number(x.min_price)===Number(r.min_price)&&Number(x.max_price||-1)===Number(r.max_price||-1)&&Number(x.commission_percent)===Number(r.commission_percent)&&Number(x.fixed_fee)===Number(r.fixed_fee)));
 
@@ -245,7 +295,8 @@ function Pricing() {
       <div className="pricingMenu" aria-label="Seções do precificador">
         {([['log','Log','≡'],['calc','Cálculo','∑'],['accounts','Tabelas por conta','◎'],['tables','Tabelas de preços','▤'],['params','Parâmetros','⚙'],['costs','Custos de produtos','▣']] as const).map(([id,label,icon])=><button key={id} type="button" className={`roundAction ${topSection===id?'addAction':''}`} title={label} aria-label={label} onClick={()=>navigate({log:'/precificador',calc:'/precificador/calculo',accounts:'/precificador/tabelas-conta',tables:'/precificador/tabelas-preco',params:'/precificador/parametros',costs:'/precificador/custos'}[id])}>{icon}</button>)}
       </div>
-      {isCalcModule && <div className="pricingEditorButtons calculationButtons"><div className="pricingSubmenu" aria-label="Módulos do cálculo"><button type="button" className={`roundAction ${calcModule==='freight'?'addAction':''}`} title="Tabela de frete" aria-label="Tabela de frete" onClick={()=>navigate('/precificador/calculo/frete')}>▥</button><button type="button" className={`roundAction ${calcModule==='matrix'?'addAction':''}`} title="Matriz de preços" aria-label="Matriz de preços" onClick={()=>navigate('/precificador/calculo/matriz')}>▦</button><button type="button" className={`roundAction ${calcModule==='tariffs'?'addAction':''}`} title="Parâmetros de tarifas por marketplace" aria-label="Parâmetros de tarifas por marketplace" onClick={()=>navigate('/precificador/calculo/tarifas')}>%</button><button type="button" className="roundAction" title="Recalcular todos os preços" aria-label="Recalcular todos os preços" onClick={()=>requestRecalculation('manual_all')}>↻</button><button type="button" className="roundAction" title="Atualizar cotações de frete do Mercado Livre" aria-label="Atualizar cotações de frete do Mercado Livre" onClick={()=>requestRecalculation('freight_rules')}>⇄</button>{recalcStatus&&<small className="muted" role="status">{recalcStatus}</small>}</div></div>}
+      {isCalcModule && <div className="pricingEditorButtons calculationButtons"><div className="pricingSubmenu" aria-label="Módulos do cálculo"><button type="button" className={`roundAction ${calcModule==='freight'?'addAction':''}`} title="Tabela de frete" aria-label="Tabela de frete" onClick={()=>navigate('/precificador/calculo/frete')}>▥</button><button type="button" className={`roundAction ${calcModule==='matrix'?'addAction':''}`} title="Matriz de preços" aria-label="Matriz de preços" onClick={()=>navigate('/precificador/calculo/matriz')}>▦</button><button type="button" className={`roundAction ${calcModule==='tariffs'?'addAction':''}`} title="Parâmetros de tarifas por marketplace" aria-label="Parâmetros de tarifas por marketplace" onClick={()=>navigate('/precificador/calculo/tarifas')}>%</button><button type="button" className="roundAction" title="Recalcular todos os preços" aria-label="Recalcular todos os preços" disabled={recalcBusy} onClick={()=>requestRecalculation('manual_all')}>↻</button><button type="button" className="roundAction" title="Atualizar cotações de frete do Mercado Livre" aria-label="Atualizar cotações de frete do Mercado Livre" disabled={recalcBusy} onClick={()=>requestRecalculation('freight_rules')}>⇄</button>{recalcStatus&&<small className="muted" role="status">{recalcStatus}</small>}</div></div>}
+      {isCalcModule&&recalcJob?.scope?.total!=null&&<div className="card" aria-live="polite"><progress max={recalcJob.scope.total||1} value={recalcJob.scope.processed||0}/><p>{recalcJob.scope.processed} de {recalcJob.scope.total} cálculos verificados — {recalcJob.scope.generated} gerados.</p>{recalcJob.scope.blocked?.length>0&&<details><summary>{recalcJob.scope.blocked.length} preços bloqueados — ver pendências</summary><ul>{recalcJob.scope.blocked.map((b:any,i:number)=><li key={i}>{matrixRows.find(p=>p.product_id===b.product)?.name||b.product} / {dbTables.find(t=>t.id===b.table)?.name} / {b.modality||'Shopee'}: {b.message}</li>)}</ul></details>}</div>}
       {section==='log' && <div className="card tableWrap"><div className="sectionHeading"><label className="logPeriod">Período<select value={logPeriod} onChange={e=>setLogPeriod(e.target.value)}><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="all">Todo o histórico</option></select></label></div><table><thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Detalhes</th></tr></thead><tbody>{pricingLogs.length?pricingLogs.map(log=><tr key={log.id}><td>{new Date(log.created_at).toLocaleString('pt-BR')}</td><td>{log.details?.user_email||logUserNames[log.user_id]||'Usuário atual'}</td><td>{log.action} ({log.affected_count} itens)</td><td><button type="button" className="infoButton" title="Baixar detalhes em TXT" onClick={()=>{const blob=new Blob([JSON.stringify(log.details,null,2)],{type:'text/plain;charset=utf-8'});const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=`log-${log.id}.txt`;a.click();setTimeout(()=>URL.revokeObjectURL(u),500);}}>⇩</button></td></tr>):<tr><td>—</td><td>—</td><td>Nenhuma alteração registrada</td><td>Os próximos uploads e cadastros aparecerão aqui.</td></tr>}</tbody></table></div>}
       {section==='costs' && <div className="card spreadsheetActions">
         <div className="spreadsheetButtons"><label className="familySelect">Família<select value={costFamily} onChange={e=>{setCostFamily(e.target.value);setCostDownloadMessage('')}}><option>Todas</option><option>Bebidas</option><option>Suplementos</option><option>Fertilizantes</option></select></label><button type="button" className="roundAction spreadsheetIcon" onClick={downloadCostModel} title="Baixar cadastro completo para atualização no Excel" aria-label="Baixar cadastro completo para atualização no Excel">⇩</button><label className="roundAction spreadsheetIcon fileButton" title="Selecionar planilha" aria-label="Selecionar planilha">⇧<input type="file" accept=".xlsx,.xls,.csv" onChange={e=>processCostFile(e.target.files?.[0])} /></label></div>
@@ -273,7 +324,15 @@ function Pricing() {
         </div>}
       </div>}
       {section==='accounts' && <div className="accountTableGroups">{Array.from(new Set(accountList.map(a=>a.channel))).map(channel=>{const channelAccounts=accountList.filter(a=>a.channel===channel);return <div className="card accountTableGroup" key={channel}><div className="sectionHeading"><h3>{channel}</h3></div>{channelAccounts.map(account=><div className="accountTableRow" key={account.id}><strong>{account.name}</strong><select aria-label={`Tabela da conta ${account.name}`} value={accountTables[account.id]||''} onChange={e=>setAccountTables(current=>({...current,[account.id]:e.target.value}))}>{tableFor(account).map(table=><option key={table.id} value={table.id}>{table.name}</option>)}</select></div>)}</div>})}</div>}
-      {section==='matrix' && <div className="card tableWrap"><div className="matrixLegend"><span><b>1</b> ML Clássico Padrão</span><span><b>2</b> ML Premium Padrão</span><span><b>3</b> ML Clássico Campanha +10%</span><span><b>4</b> ML Premium Campanha +10%</span><span><b>5</b> Shopee Padrão</span><span><b>6</b> Shopee Campanha +10%</span></div><table><thead><tr><th>EAN</th><th>Produto</th><th aria-label="Família"></th><th>Custo</th><th>Margem</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr></thead><tbody>{Array.from(new Map(matrixRows.map(row=>[row.id,row])).values()).map(product=>{const rows=matrixRows.filter(row=>row.id===product.id);const price=(name:string)=>{const campaign=/campanha/i.test(name);const channel=(/shopee|normal/i.test(name)&&!/(clássico|premium)/i.test(name))?'Shopee':'Mercado Livre';return rows.find(row=>row.channel===channel && (channel==='Shopee' ? /campanha/i.test(row.pricing_table_name||'')===campaign : (row.listing_type===(/premium/i.test(name)?'premium':'classic') && /campanha/i.test(row.pricing_table_name||'')===campaign)))?.calculated_price;};return <tr key={product.id}><td>{product.ean}</td><td>{product.name}</td><td title={product.family_name}>{Number(product.family_id)===1?"◈":Number(product.family_id)===2?"✚":Number(product.family_id)===3?"▰":"•"}</td><td>{Number(product.unit_cost||0).toFixed(2).replace('.',',')}</td><td>{Number(product.target_margin||0).toFixed(2).replace('.',',')}%</td>{['Preço Clássico','Preço Premium','Clássico + 10% campanha','Premium + 10% campanha','Preço normal','Normal + 10% campanha'].map(name=><td key={name} onClick={()=>setCalcDetail(calculationTicket(product,name))} title={price(name)!=null ? ("Custo R$ " + Number(product.unit_cost).toFixed(2) + " | Margem " + product.target_margin + "% | Comissão " + product.commission_percent + "% | Taxa fixa R$ " + Number(product.commission_fixed_fee).toFixed(2) + " | Frete R$ " + Number(product.freight_value).toFixed(2) + " | Lucro líquido R$ " + (Number(price(name))-Number(product.unit_cost)-(Number(price(name))*Number(product.commission_percent)/100)-Number(product.commission_fixed_fee)-Number(product.freight_value)).toFixed(2)) : "Preço indisponível"}>{price(name)!=null?Number(price(name)).toFixed(2).replace('.',','):'—'}</td>)}</tr>})}</tbody></table>{!matrixRows.length&&<p className="muted">Nenhum produto calculado.</p>}</div>}{calcDetail&&<div className="calcModalBackdrop" role="presentation" onClick={()=>setCalcDetail('')}><div className="calcModal" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button type="button" className="calcModalClose" onClick={()=>setCalcDetail('')}>×</button><h3>{calcDetail.split(' | ')[0]}</h3><pre className="calculationTicket">{calcDetail}</pre></div></div>}
+      {section==='matrix' && <div className="card tableWrap">
+        <table><thead><tr><th>EAN</th><th>Produto</th><th>Custo</th><th>Margem</th>{dbTables.filter(t=>['Mercado Livre','Shopee'].includes(t.channel)).flatMap(t=>(t.channel==='Mercado Livre'?['classic','premium']:[null]).map(m=><th key={t.id+String(m)}>{t.channel} / {m==='classic'?'Clássico':m==='premium'?'Premium':''} / {t.name}</th>))}</tr></thead>
+        <tbody>{Array.from(new Map(matrixRows.map(row=>[row.id,row])).values()).map(product=><tr key={product.id}><td>{product.ean}</td><td>{product.name}</td><td>{Number(product.unit_cost||0).toFixed(2)}</td><td>{product.target_margin}%</td>{dbTables.filter(t=>['Mercado Livre','Shopee'].includes(t.channel)).flatMap(t=>(t.channel==='Mercado Livre'?['classic','premium']:[null]).map(m=>{
+          const row=matrixRows.find(r=>r.product_id===product.id&&r.pricing_table_id===t.id&&r.listing_type===m);
+          const blocked=recalcJob?.scope?.blocked?.find((b:any)=>b.product===product.id&&b.table===t.id&&b.modality===m);
+          return <td key={t.id+String(m)}>{blocked?<span title={blocked.message}>Pendente</span>:row?.calculated_price!=null?<button className="infoButton" onClick={()=>setCalcDetail(calculationTicket(row))}>{Number(row.calculated_price).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</button>:'—'}</td>;
+        }))}</tr>)}</tbody></table>{!matrixRows.length&&<p>Nenhum produto disponível.</p>}
+      </div>}
+      {calcDetail&&<div className="calcModalBackdrop" onClick={()=>setCalcDetail('')}><div className="calcModal" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button className="calcModalClose" onClick={()=>setCalcDetail('')}>×</button><h3>Memória de cálculo</h3><pre className="calculationTicket">{calcDetail}</pre></div></div>}
       {section==='tables' && <div className="priceTableGroups">{['Mercado Livre','Shopee','Ruta Direct Shop'].map(channel=>{const ts=activeTables.filter(t=>t.channel===channel);return <div className="card priceTableGroup" key={channel}><div className="sectionHeading"><h3>{channel}</h3><button className="roundAction addAction" type="button" title="Cadastrar tabela" aria-label="Cadastrar tabela" disabled>+</button></div><table><tbody>{ts.map(t=><tr key={t.id}><td>{t.name}</td><td><button className="infoButton" type="button" title={t.adjustment?'Preço com gordura para compensar 10% de desconto e preservar o resultado planejado.':'Preço calculado com custo, margem e premissas para entregar o resultado planejado.'} aria-label="Detalhes do cálculo">ⓘ</button></td></tr>)}</tbody></table></div>})}</div>}</>
   );
 }

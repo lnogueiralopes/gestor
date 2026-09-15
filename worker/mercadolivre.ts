@@ -50,9 +50,18 @@ export async function mercadoLivre(request: Request, env: Env): Promise<Response
     if(!user) return reply({error:'Somente administradores ativos podem conectar contas.'},403);
     if(url.pathname.endsWith('/shipping-quote') && request.method==='POST') {
       const body=await request.json() as {seller_id?:string;dimensions?:string;item_price?:number;listing_type_id?:string;mode?:string;logistic_type?:string;condition?:string;free_shipping?:boolean};
-      const connectionPath=body.seller_id?`ml_connections?seller_id=eq.${encodeURIComponent(body.seller_id)}&select=seller_id,access_token`: 'ml_connections?select=seller_id,access_token&limit=1';
-      const found=await database(env,connectionPath); const connections=found.ok?await found.json() as {seller_id:string;access_token:string}[]:[];
+      const connectionPath=body.seller_id?`ml_connections?seller_id=eq.${encodeURIComponent(body.seller_id)}&select=seller_id,access_token,refresh_token,expires_at`: 'ml_connections?select=seller_id,access_token,refresh_token,expires_at&order=seller_id&limit=1';
+      const found=await database(env,connectionPath); const connections=found.ok?await found.json() as {seller_id:string;access_token:string;refresh_token:string;expires_at:string}[]:[];
       if(!connections.length)return reply({error:'Nenhuma conta Mercado Livre conectada.'},404);
+      if(Date.parse(connections[0].expires_at)<Date.now()+60000){
+        const refreshed=await fetch('https://api.mercadolibre.com/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',client_id:env.ML_CLIENT_ID,client_secret:env.ML_CLIENT_SECRET,refresh_token:connections[0].refresh_token})});
+        if(!refreshed.ok)return reply({error:'Reconecte a conta Mercado Livre para obter o frete.'},502);
+        const token=await refreshed.json() as {access_token:string;refresh_token:string;expires_in:number};
+        if(!token.access_token||!token.refresh_token||!Number.isFinite(Number(token.expires_in)))return reply({error:'Resposta de renovação da conta inválida.'},502);
+        const saved=await database(env,`ml_connections?seller_id=eq.${encodeURIComponent(connections[0].seller_id)}`,{method:'PATCH',body:JSON.stringify({access_token:token.access_token,refresh_token:token.refresh_token,expires_at:new Date(Date.now()+Number(token.expires_in)*1000).toISOString(),updated_at:new Date().toISOString()})});
+        if(!saved.ok)return reply({error:'Não foi possível salvar a renovação da conta.'},502);
+        connections[0].access_token=token.access_token;
+      }
       if(!body.dimensions||!Number.isFinite(Number(body.item_price)))return reply({error:'Informe dimensões e preço para simular o frete.'},400);
       const q=new URLSearchParams({dimensions:body.dimensions,item_price:String(body.item_price),listing_type_id:body.listing_type_id||'gold_special',mode:body.mode||'me2',condition:body.condition||'new',logistic_type:body.logistic_type||'drop_off',free_shipping:String(body.free_shipping??true),verbose:'true'});
       const quote=await fetch(`https://api.mercadolibre.com/users/${encodeURIComponent(connections[0].seller_id)}/shipping_options/free?${q}`,{headers:{Authorization:`Bearer ${connections[0].access_token}`,'x-format-new':'true'}});

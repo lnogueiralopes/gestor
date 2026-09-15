@@ -10,5 +10,5 @@
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true
   },
-  "include": ["vite.config.ts", "worker"]
+  "include": ["vite.config.ts", "worker", "src/lib/pricingEngine.ts"]
 }
