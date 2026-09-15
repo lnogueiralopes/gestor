@@ -1,4 +1,5 @@
 import TopNavigation from './TopNavigation';
+import PricingMatrix from './PricingMatrix';
 import { useEffect, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { accounts, kits, kitMatrix, kitRules, pricingParameters, products, productMatrix, priceTables, type ChannelCell } from "./demo";
@@ -324,14 +325,7 @@ function Pricing() {
         </div>}
       </div>}
       {section==='accounts' && <div className="accountTableGroups">{Array.from(new Set(accountList.map(a=>a.channel))).map(channel=>{const channelAccounts=accountList.filter(a=>a.channel===channel);return <div className="card accountTableGroup" key={channel}><div className="sectionHeading"><h3>{channel}</h3></div>{channelAccounts.map(account=><div className="accountTableRow" key={account.id}><strong>{account.name}</strong><select aria-label={`Tabela da conta ${account.name}`} value={accountTables[account.id]||''} onChange={e=>setAccountTables(current=>({...current,[account.id]:e.target.value}))}>{tableFor(account).map(table=><option key={table.id} value={table.id}>{table.name}</option>)}</select></div>)}</div>})}</div>}
-      {section==='matrix' && <div className="card tableWrap">
-        <table><thead><tr><th>EAN</th><th>Produto</th><th>Custo</th><th>Margem</th>{dbTables.filter(t=>['Mercado Livre','Shopee'].includes(t.channel)).flatMap(t=>(t.channel==='Mercado Livre'?['classic','premium']:[null]).map(m=><th key={t.id+String(m)}>{t.channel} / {m==='classic'?'Clássico':m==='premium'?'Premium':''} / {t.name}</th>))}</tr></thead>
-        <tbody>{Array.from(new Map(matrixRows.map(row=>[row.id,row])).values()).map(product=><tr key={product.id}><td>{product.ean}</td><td>{product.name}</td><td>{Number(product.unit_cost||0).toFixed(2)}</td><td>{product.target_margin}%</td>{dbTables.filter(t=>['Mercado Livre','Shopee'].includes(t.channel)).flatMap(t=>(t.channel==='Mercado Livre'?['classic','premium']:[null]).map(m=>{
-          const row=matrixRows.find(r=>r.product_id===product.id&&r.pricing_table_id===t.id&&r.listing_type===m);
-          const blocked=recalcJob?.scope?.blocked?.find((b:any)=>b.product===product.id&&b.table===t.id&&b.modality===m);
-          return <td key={t.id+String(m)}>{blocked?<span title={blocked.message}>Pendente</span>:row?.calculated_price!=null?<button className="infoButton" onClick={()=>setCalcDetail(calculationTicket(row))}>{Number(row.calculated_price).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</button>:'—'}</td>;
-        }))}</tr>)}</tbody></table>{!matrixRows.length&&<p>Nenhum produto disponível.</p>}
-      </div>}
+      {section==='matrix' && <PricingMatrix rows={matrixRows} tables={dbTables} blocked={recalcJob?.scope?.blocked||[]} onDetail={row=>setCalcDetail(calculationTicket(row))}/>}
       {calcDetail&&<div className="calcModalBackdrop" onClick={()=>setCalcDetail('')}><div className="calcModal" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button className="calcModalClose" onClick={()=>setCalcDetail('')}>×</button><h3>Memória de cálculo</h3><pre className="calculationTicket">{calcDetail}</pre></div></div>}
       {section==='tables' && <div className="priceTableGroups">{['Mercado Livre','Shopee','Ruta Direct Shop'].map(channel=>{const ts=activeTables.filter(t=>t.channel===channel);return <div className="card priceTableGroup" key={channel}><div className="sectionHeading"><h3>{channel}</h3><button className="roundAction addAction" type="button" title="Cadastrar tabela" aria-label="Cadastrar tabela" disabled>+</button></div><table><tbody>{ts.map(t=><tr key={t.id}><td>{t.name}</td><td><button className="infoButton" type="button" title={t.adjustment?'Preço com gordura para compensar 10% de desconto e preservar o resultado planejado.':'Preço calculado com custo, margem e premissas para entregar o resultado planejado.'} aria-label="Detalhes do cálculo">ⓘ</button></td></tr>)}</tbody></table></div>})}</div>}</>
   );
