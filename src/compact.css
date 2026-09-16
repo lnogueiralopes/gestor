@@ -161,3 +161,5 @@ table,input,textarea,select{font-family:Montserrat,Arial,sans-serif;font-variant
 .pricingMatrixTable .lastCalculation { width:112px; font-size:11px; text-align:left; }
 .pricingMatrixTable .calculateAction { width:64px; text-align:center; }
 .pricingMatrixTable .calculateAction .roundAction { width:28px; height:28px; min-width:28px; padding:3px; }
+
+.calculationStatus{display:flex;align-items:center;gap:14px;padding:10px 14px;margin:12px 0 20px;border:1px solid #ccd5c5;border-radius:10px;background:#edf1e9;color:#394632;font-size:12px;line-height:1.5}.calculationStatus span{flex:1;min-width:0;overflow-wrap:anywhere;white-space:pre-line}.calculationStatus progress{width:140px;max-width:30%;height:5px;accent-color:#648447}.calculationStatusError{background:#f6f0e6;border-color:#dfd1b8;color:#674b24}.calculationStatus .roundAction{width:26px;height:26px;min-width:26px;padding:0;font-size:16px}.calculationStatus + .card{margin-top:0}
