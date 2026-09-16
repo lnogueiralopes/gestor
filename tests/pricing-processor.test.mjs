@@ -38,6 +38,38 @@ test('worker requires authentication before reading or writing the database',asy
  const r=await pricing(new Request('https://example.test/api/pricing/recalculate',{method:'POST',body:'{}'}),{SUPABASE_URL:'https://example.test',SUPABASE_SERVICE_ROLE_KEY:'test'});
  assert.equal(r.status,401);
 });
+
+test('individual calculation processes only the selected product and never requests an external quote',async()=>{
+ const id='11111111-1111-4111-8111-111111111111',jobId='22222222-2222-4222-8222-222222222222';
+ const originalFetch=globalThis.fetch;let job;const saved=[];
+ globalThis.fetch=async(input,options={})=>{
+   const url=new URL(input);assert.equal(url.origin,'https://database.test');
+   const body=options.body?JSON.parse(options.body):null;
+   let result=[];
+   if(url.pathname==='/auth/v1/user')result={id};
+   else switch(url.pathname.split('/').at(-1)){
+     case 'products':assert.equal(url.searchParams.get('id'),`in.(${id})`);result=[{...p,id}];break;
+     case 'pricing_tables':result=[t];break;
+     case 'pricing_parameters':result=params;break;
+     case 'pricing_engine_fee_rules':result=fees;break;
+     case 'pricing_recalculation_requests':
+       if(options.method==='POST')job={...body,id:jobId,status:'pending'};
+       if(options.method==='PATCH')job={...job,...body};
+       result=[job];break;
+     case 'pricing_calculations':saved.push(...body);result=body;break;
+   }
+   return Response.json(result);
+ };
+ try{
+   const env={SUPABASE_URL:'https://database.test',SUPABASE_SERVICE_ROLE_KEY:'test'};
+   const request=body=>new Request('https://app.test/api/pricing/recalculate',{method:'POST',headers:{Authorization:'Bearer test'},body:JSON.stringify(body)});
+   const initialized=await (await pricing(request({product_id:id}),env)).json();
+   assert.equal(initialized.scope.mode,'single');assert.deepEqual(initialized.scope.product_ids,[id]);
+   const completed=await (await pricing(request({job_id:jobId}),env)).json();
+   assert.equal(completed.status,'completed');assert.equal(completed.scope.processed,1);
+   assert.equal(saved.length,1);assert.equal(saved[0].product_id,id);assert.equal(saved[0].calculated_price,153.64);
+ }finally{globalThis.fetch=originalFetch;}
+});
 test('generated results pass the real database snapshot guard for both marketplaces',async()=>{
  const db=new PGlite();
  try{

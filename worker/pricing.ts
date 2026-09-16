@@ -1,6 +1,6 @@
 import type { Env } from './index';
 import { solvePricing } from '../src/lib/pricingEngine';
-import { mercadoLivre } from './mercadolivre';
+
 
 type Row = Record<string, any>;
 const response = (data: unknown, status=200) => new Response(JSON.stringify(data), {status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
@@ -61,6 +61,18 @@ export function calculate(p:Row,t:Row,modality:string|null,parameters:Row[],fees
   return candidates.sort((a,b)=>a.calculated_price-b.calculated_price)[0];
 }
 
+export function groupSnapshot(group:Row|undefined):Row|null {
+  if(!group || !group.group_key || !['api','manual'].includes(group.freight_origin) || !group.confirmed_at || group.freight_net_value==null)return null;
+  if(['weight_kg','width_cm','length_cm','height_cm'].some(k=>!Number.isFinite(Number(group[k]))||Number(group[k])<=0))return null;
+  const freight=required(group.freight_net_value,'frete validado');
+  return {group_id:group.id,group_number:group.group_number,family_id:group.family_id,quantity:group.package_units,model:group.name,
+    weight_kg:Number(group.weight_kg),width_cm:Number(group.width_cm),length_cm:Number(group.length_cm),height_cm:Number(group.height_cm),
+    volume_cm3:round(Number(group.width_cm)*Number(group.length_cm)*Number(group.height_cm)),volume_band_liters:Number(group.volume_liters),cubic_weight_kg:group.cubic_weight_kg,
+    freight_net_value:freight,freight_table_value:required(group.freight_table_value,'frete bruto'),freight_discount_percent:required(group.freight_discount_percent,'desconto do frete'),freight_discount_value:required(group.freight_discount_value,'desconto do frete'),
+    source:group.freight_origin,updated_at:group.freight_updated_at,revision:group.freight_revision,
+    quote_context:group.freight_origin==='api'?group.accepted_quote:null};
+}
+
 export async function pricing(request:Request,env:Env):Promise<Response>{
   if(!env.SUPABASE_URL||!env.SUPABASE_SERVICE_ROLE_KEY)return response({error:'Banco não configurado no Worker.'},503);
   const authorization=request.headers.get('Authorization');
@@ -71,83 +83,62 @@ export async function pricing(request:Request,env:Env):Promise<Response>{
     if(!res.ok){const err=await res.json() as Row;throw new Error(err.message||`Erro no banco (${res.status}).`);}
     return res.status===204?[]:await res.json() as Row[];
   }
-  async function all(table:string,filter=''){
+  async function all(table:string,filter='',order='id'){
     const rows:Row[]=[];
-    for(let offset=0;;offset+=500){const page=await db(`${table}?select=*&order=id&limit=500&offset=${offset}${filter}`);rows.push(...page);if(page.length<500)return rows;}
+    for(let offset=0;;offset+=500){const page=await db(`${table}?select=*&order=${order}&limit=500&offset=${offset}${filter}`);rows.push(...page);if(page.length<500)return rows;}
   }
+  const uuid=(id:unknown)=>typeof id==='string'&&/^[0-9a-f-]{36}$/i.test(id);
   try{
     const auth=await fetch(`${env.SUPABASE_URL}/auth/v1/user`,{headers});
     if(!auth.ok)return response({error:'Sessão expirada.'},401);
     const user=await auth.json() as Row;
     if(request.method!=='POST')return response({error:'Método inválido.'},405);
     const body=await request.json() as Row;
-    if(!body.job_id){
-      globalCosts(await db('pricing_parameters?scope=eq.global'));
-      const products=await all('products','&is_active=eq.true');
-      const tables=await all('pricing_tables');
-      const tasks=products.flatMap(p=>tables.filter(t=>['Mercado Livre','Shopee'].includes(t.channel)).flatMap(t=>(t.channel==='Mercado Livre'?['classic','premium']:[null]).map(m=>({product:p.id,table:t.id,modality:m}))));
-      const jobs=await db('pricing_recalculation_requests','POST',{reason:body.reason==='freight_rules'?'freight_rules':'manual_all',requested_by:user.id,scope:{tasks,total:tasks.length,processed:0,generated:0,blocked:[],requested_from:'/precificador'}});
-      return response(jobs[0]);
+    if(body.product_id&&!uuid(body.product_id))return response({error:'Produto inválido.'},400);
+    if(body.job_id&&!uuid(body.job_id))return response({error:'Solicitação inválida.'},400);
+    let job:Row|undefined;
+    const jobPath=`pricing_recalculation_requests?id=eq.${body.job_id}&requested_by=eq.${user.id}`;
+    if(body.job_id){
+      [job]=await db(jobPath);if(!job)return response({error:'Solicitação não encontrada.'},404);
+      if(job.scope.version!==2)return response({error:'Solicitação antiga. Inicie um novo cálculo.'},409);
+      if(job.status==='running'&&Date.now()-Date.parse(job.scope.started_at)>180000){await db(`${jobPath}&status=eq.running`,'PATCH',{status:'pending'});job.status='pending';}
+      if(job.status!=='pending')return response(job);
     }
-    if(!/^[0-9a-f-]{36}$/i.test(body.job_id))return response({error:'Solicitação inválida.'},400);
-    const path=`pricing_recalculation_requests?id=eq.${body.job_id}&requested_by=eq.${user.id}`;
-    const [job]=await db(path);
-    if(!job)return response({error:'Solicitação não encontrada.'},404);
-    // A disconnected browser can resume a persisted job. Recover only expired leases.
-    if(job.status==='running' && Date.now()-Date.parse(job.scope.started_at||job.requested_at)>180000){
-      await db(`${path}&status=eq.running`,'PATCH',{status:'pending'});job.status='pending';
+    const ids=job?job.scope.product_ids.slice(job.scope.processed,job.scope.processed+5):body.product_id?[body.product_id]:null;
+    if(ids&&ids.some((id:unknown)=>!uuid(id)))throw new Error('Identificador inválido na solicitação.');
+    const [products,tables,parameters,fees,fixed,family,groups,mapping]=await Promise.all([
+      all('products',`&is_active=eq.true${ids?`&id=in.(${ids.join(',')})`:''}`),all('pricing_tables'),db('pricing_parameters?scope=eq.global'),
+      all('pricing_engine_fee_rules'),all('pricing_fixed_fee_rules','&active=eq.true'),db('pricing_family_parameters?select=*'),
+      all('pricing_logistic_models','&group_key=not.is.null'),all('pricing_product_logistic_groups','', 'product_id')
+    ]);
+    globalCosts(parameters);
+    const activeTables=tables.filter(t=>['Mercado Livre','Shopee'].includes(t.channel));
+    const logistics=new Map(products.map(p=>[p.id,groupSnapshot(groups.find(g=>g.id===mapping.find(m=>m.product_id===p.id)?.group_id))]));
+    const missing=activeTables.some(t=>t.channel==='Mercado Livre')?products.filter(p=>!logistics.get(p.id)):[];
+    if(missing.length)return response({code:'FREIGHT_PENDING',error:'Existem fretes a serem definidos',product_ids:missing.map(p=>p.id),group_ids:[...new Set(missing.map(p=>mapping.find(m=>m.product_id===p.id)?.group_id).filter(Boolean))]},409);
+    if(!job){
+      if(!products.length)return response({error:'Nenhum produto ativo encontrado.'},400);
+      const [created]=await db('pricing_recalculation_requests','POST',{reason:'manual_all',requested_by:user.id,scope:{version:2,mode:body.product_id?'single':'general',product_ids:products.map(p=>p.id),total:products.length,processed:0,generated:0,blocked:[],requested_from:'/precificador'}});
+      return response(created);
     }
-    if(job.status!=='pending')return response(job);
-    job.scope.started_at=new Date().toISOString();
-    const claimed=await db(`${path}&status=eq.pending`,'PATCH',{status:'running',scope:job.scope});
-    if(!claimed.length)return response({error:'Cálculo já está em processamento.'},409);
-    const scope=job.scope;
+    const scope={...job.scope,started_at:new Date().toISOString()};
+    if(!(await db(`${jobPath}&status=eq.pending`,'PATCH',{status:'running',scope})).length)return response({error:'Cálculo já em processamento.'},409);
     try{
-      const task=scope.tasks?.[scope.processed];
-      if(task){
+      const results:Row[]=[];
+      for(const id of ids){
+        const p=products.find(p=>p.id===id);
         try{
-          if(![task.product,task.table].every(id=>/^[0-9a-f-]{36}$/i.test(id)))throw new Error('Identificador de produto ou tabela inválido.');
-          const [[p],[t],parameters,fees,fixed,family]=await Promise.all([db(`products?id=eq.${task.product}&is_active=eq.true`),db(`pricing_tables?id=eq.${task.table}`),db('pricing_parameters?scope=eq.global'),all('pricing_engine_fee_rules'),all('pricing_fixed_fee_rules','&active=eq.true'),db('pricing_family_parameters?select=*')]);
-          if(!p||!t)throw new Error('Produto ou tabela removido ou inativo.');
-          globalCosts(parameters);
-          const packaging=required(family.find(r=>r.family_id===p.family_id)?.packaging_unit_cost??0,'embalagem');
-          let logistics:Row|null=null;
-          if(t.channel==='Mercado Livre'){
-            const dims=Object.fromEntries(['weight_kg','width_cm','length_cm','height_cm'].map(k=>{const n=required(p[k],k);if(n<=0)throw new Error('Preencha peso e dimensões do produto.');return [k,n];}));
-            const previous=await db(`pricing_current_calculations?product_id=eq.${p.id}&pricing_table_id=eq.${t.id}&listing_type=eq.${task.modality}`);
-            const cached=previous[0]?.calculation_details?.logistics;
-            if(job.reason!=='freight_rules' && cached?.source==='mercadolivre.shipping_options' && Object.keys(dims).every(k=>dims[k]===cached[k])){
-              const check=calculate(p,t,task.modality,parameters,fees,fixed,packaging,cached);
-              if(check.effective_price===cached.quoted_price)logistics=cached;
-            }
-            if(!logistics) {
-              // Start with the last effective price or a conservative cost-based probe; converge below.
-              let probe=Number(previous[0]?.effective_price)||Math.max(79,Number(p.unit_cost)*2);
-              for(let attempt=0;attempt<6;attempt++){
-                const quoted=await mercadoLivre(new Request(new URL('/api/marketplaces/mercadolivre/shipping-quote',request.url),{method:'POST',headers:{Authorization:authorization,'Content-Type':'application/json'},body:JSON.stringify({dimensions:`${Math.ceil(dims.height_cm)}x${Math.ceil(dims.width_cm)}x${Math.ceil(dims.length_cm)},${Math.ceil(dims.weight_kg*1000)}`,item_price:probe,listing_type_id:task.modality==='premium'?'gold_pro':'gold_special'})}),env);
-                const quote=await quoted.json() as Row;
-                if(!quoted.ok)throw new Error(quote.error||'Falha na cotação de frete.');
-                const coverage=quote.quote?.coverage;
-                if(coverage?.all_country?.currency_id!=='BRL')throw new Error('Cotação de frete sem moeda BRL.');
-                const net=required(coverage.all_country.list_cost,'valor da cotação');
-                const discount=coverage.discount;
-                logistics={...dims,model:'Cadastro do produto — 1 unidade',cubic_weight_kg:null,source:quote.source,seller_id:quote.seller_id,quoted_at:new Date().toISOString(),quoted_price:probe,freight_net_value:net,freight_table_value:discount?.promoted_amount??net,freight_discount_percent:(discount?.rate??0)*100,freight_discount_value:round((discount?.promoted_amount??net)-net),raw_quote:quote.quote};
-                const candidate=calculate(p,t,task.modality,parameters,fees,fixed,packaging,logistics);
-                if(candidate.effective_price===probe)break;
-                probe=candidate.effective_price;
-                if(attempt===5)throw new Error('Cotação e preço não convergiram. Atualize o frete e tente novamente.');
-              }
-            }
-          }
-          const result=calculate(p,t,task.modality,parameters,fees,fixed,packaging,logistics);
-          await db('pricing_calculations','POST',{...result,calculated_by:user.id});
-          scope.generated++;
-        }catch(error){scope.blocked.push({...task,message:error instanceof Error?error.message:'Falha no cálculo.'});}
-        scope.processed++;
+          if(!p)throw new Error('Produto removido ou inativo.');
+          const productResults=activeTables.flatMap(t=>(t.channel==='Mercado Livre'?['classic','premium']:[null]).map(modality=>calculate(p,t,modality,parameters,fees,fixed,required(family.find(r=>r.family_id===p.family_id)?.packaging_unit_cost??0,'embalagem'),t.channel==='Mercado Livre'?logistics.get(p.id)!:null)));
+          results.push(...productResults.map(result=>({...result,engine_version:'2.0.0',calculated_by:user.id})));
+        }catch(error){scope.blocked.push({product:id,message:error instanceof Error?error.message:'Falha no cálculo.'});}
       }
+      // One atomic database write per bounded batch, never one freight request per SKU.
+      if(results.length)await db('pricing_calculations','POST',results);
+      scope.generated+=results.length;scope.processed+=ids.length;
       const done=scope.processed>=scope.total;
-      const [updated]=await db(path,'PATCH',{scope,status:done?'completed':'pending',completed_at:done?new Date().toISOString():null});
+      const [updated]=await db(jobPath,'PATCH',{scope,status:done?'completed':'pending',completed_at:done?new Date().toISOString():null});
       return response(updated);
-    }catch(error){await db(path,'PATCH',{status:'failed',error_message:error instanceof Error?error.message:'Falha no processamento.'});throw error;}
+    }catch(error){await db(jobPath,'PATCH',{status:'failed',error_message:error instanceof Error?error.message:'Falha no processamento.'});throw error;}
   }catch(error){return response({error:error instanceof Error?error.message:'Não foi possível executar o cálculo.'},400);}
 }

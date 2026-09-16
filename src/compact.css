@@ -142,7 +142,9 @@ table,input,textarea,select{font-family:Montserrat,Arial,sans-serif;font-variant
 .pricingMatrixTable { width:100%; min-width:1080px; table-layout:fixed; font-size:11px; }
 .pricingMatrixTable th,.pricingMatrixTable td { padding:9px 5px; }
 .pricingMatrixTable th { white-space:nowrap; }
-.pricingMatrixTable th:nth-child(1) { width:117px; }
+.pricingMatrixTable th:nth-child(1) { width:132px; }
+.pricingMatrixTable td:first-child .matrixText { font-size:10px; letter-spacing:-.2px; }
+.pricingMatrixTable th:nth-child(n+8),.pricingMatrixTable td:nth-child(n+8) { text-align:right; }
 .pricingMatrixTable th:nth-child(2),.pricingMatrixTable th:nth-child(3),.pricingMatrixTable th:nth-child(5) { width:118px; }
 .pricingMatrixTable th:nth-child(4) { width:88px; }
 .pricingMatrixTable th:nth-child(6) { width:97px; }
@@ -152,3 +154,10 @@ table,input,textarea,select{font-family:Montserrat,Arial,sans-serif;font-variant
 .pricingMatrixTable .columnFilter,.pricingMatrixTable .columnFilter:focus { width:19px; margin-left:3px; }
 .pricingMatrixTable .matrixPrice { border:0; border-radius:0; background:transparent; color:inherit; font:inherit; font-weight:600; padding:3px 0; cursor:pointer; }
 .pricingMatrixTable .matrixPrice:hover { text-decoration:underline; }
+.freightGroups input[inputmode="decimal"] { max-width:90px; padding:5px; }
+.freightGroups td { padding:8px 6px; font-size:12px; }
+.freightGroups .pendingFreight { background:#fff4d6; }
+.freightGroups td small { display:block; }
+.pricingMatrixTable .lastCalculation { width:130px; font-size:11px; text-align:left; }
+.pricingMatrixTable .calculateAction { width:64px; text-align:center; }
+.pricingMatrixTable .calculateAction .roundAction { width:28px; height:28px; min-width:28px; padding:3px; }

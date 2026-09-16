@@ -10,7 +10,7 @@ test('026 applies to actual migration chain and enforces new pricing contracts',
  create schema auth; create table auth.users(id uuid primary key);
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;`);
  const dir=new URL('../supabase/migrations/',import.meta.url);
- for(const f of (await readdir(dir)).filter(f=>f.endsWith('.sql')).sort()){
+ for(const f of (await readdir(dir)).filter(f=>f.endsWith('.sql')&&f<='026_pricing_engine.sql').sort()){
    await db.exec((await readFile(new URL(f,dir),'utf8')).replace('create extension if not exists "pgcrypto";',''));
  }
  const rows=async sql=>(await db.query(sql)).rows;
