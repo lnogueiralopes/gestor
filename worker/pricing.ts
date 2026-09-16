@@ -1,5 +1,5 @@
 import type { Env } from './index';
-import { solvePricing } from '../src/lib/pricingEngine';
+import { solvePricing, effectivePriceAfterDiscount } from '../src/lib/pricingEngine';
 
 
 type Row = Record<string, any>;
@@ -44,9 +44,9 @@ export function calculate(p:Row,t:Row,modality:string|null,parameters:Row[],fees
       const base=solvePricing(input);
       const discount=1-input.discountPercent/100;
       let announced=Math.max(Math.ceil(base.announcedPrice*(1+markup/100)*100)/100,Math.ceil(Math.max(Number(fee.min_price),Number(f.min_price))/discount*100)/100);
-      let effective=round(announced*discount,2);
+      let effective=effectivePriceAfterDiscount(announced,input.discountPercent);
       const resultAt=(v:number)=>v*(1-(input.taxPercent+input.commissionPercent+input.additionalCommissionPercent)/100)-base.adjustedCost-input.fixedFee-input.freightValue-input.packagingUnitCost-input.operationalCost-input.additionalFixedCost;
-      while(resultAt(effective)<base.targetResult && announced<1e9){announced=round(announced+0.01,2);effective=round(announced*discount,2);}
+      while(resultAt(effective)<base.targetResult && announced<1e9){announced=round(announced+0.01,2);effective=effectivePriceAfterDiscount(announced,input.discountPercent);}
       if(!band(fee,effective) || effective<Number(f.min_price) || (f.max_price_exclusive!=null && effective>=Number(f.max_price_exclusive)))continue;
       unique(applicable.filter(r=>band(r,effective)),['commission_percent','fixed_fee'],'comissão');
       const selectedFixed=ff.filter(r=>effective>=Number(r.min_price)&&(r.max_price_exclusive==null||effective<Number(r.max_price_exclusive)));

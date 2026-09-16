@@ -283,7 +283,7 @@ function Pricing() {
       if(job.scope.blocked.length)throw new Error(job.scope.blocked.map((b:any)=>(matrixRows.find(r=>r.product_id===b.product)?.name||b.product)+': '+b.message).join('\n'));
       if(productId)setRecalcJob((old:any)=>old?{...old,scope:{...old.scope,blocked:(old.scope.blocked||[]).filter((b:any)=>b.product!==productId)}}:old);
     }catch(error){const message=error instanceof Error?error.message:'Falha no processamento.';if(productId)setIndividualErrors(old=>({...old,[productId]:message}));else setRecalcStatus(message);}
-    finally{processing.current.delete(key);if(productId)setIndividualBusy(old=>old.filter(id=>id!==productId));else setRecalcBusy(false);await loadMatrix(productId);}
+    finally{try{await loadMatrix(productId);}finally{processing.current.delete(key);if(productId)setIndividualBusy(old=>old.filter(id=>id!==productId));else setRecalcBusy(false);}}
   };
   const calculationTicket = (row:any) => {
     const d=row.calculation_details;

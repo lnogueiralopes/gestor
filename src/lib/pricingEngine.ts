@@ -25,6 +25,14 @@ export function validatePricingInput(input: PricingInput, options: { requiresFre
   return true;
 }
 
+/** Match PostgreSQL numeric rounding: cents and four-decimal percentage units. */
+export function effectivePriceAfterDiscount(announced:number,discountPercent:number):number {
+  if(!Number.isFinite(announced)||announced<0||!Number.isFinite(discountPercent)||discountPercent<0||discountPercent>=100)throw new Error('Preço ou desconto inválido.');
+  const cents=BigInt(announced.toFixed(2).replace('.',''));
+  const rate=BigInt(discountPercent.toFixed(4).replace('.',''));
+  return Number((cents*(1000000n-rate)+500000n)/1000000n)/100;
+}
+
 /** Deterministic local solver. Percentages use 0..100; prices use cents. */
 export function solvePricing(input: PricingInput): PricingResult {
   validatePricingInput(input);
@@ -37,9 +45,9 @@ export function solvePricing(input: PricingInput): PricingResult {
   const netFactor=(1-variable)*(1-n(input.discountPercent)/100);
   let announced=Math.ceil((targetResult+adjustedCost+fixed)/netFactor*100)/100;
   // Cent rounding can move the result below target; raise by one cent until safe.
-  let effective=Number((announced*(1-n(input.discountPercent)/100)).toFixed(2));
+  let effective=effectivePriceAfterDiscount(announced,n(input.discountPercent));
   let result=effective*(1-variable)-adjustedCost-fixed;
-  while(result+1e-9<targetResult && announced<1e9){ announced=Number((announced+0.01).toFixed(2)); effective=Number((announced*(1-n(input.discountPercent)/100)).toFixed(2)); result=effective*(1-variable)-adjustedCost-fixed; }
+  while(result+1e-9<targetResult && announced<1e9){ announced=Number((announced+0.01).toFixed(2)); effective=effectivePriceAfterDiscount(announced,n(input.discountPercent)); result=effective*(1-variable)-adjustedCost-fixed; }
   return {...input,quantity:q,originalCost,targetResult,adjustedCost,announcedPrice:announced,effectivePrice:effective,calculatedResult:Number(result.toFixed(4)),converged:result+1e-9>=targetResult};
 }
 

@@ -88,3 +88,14 @@ test('generated results pass the real database snapshot guard for both marketpla
    assert.equal((await db.query('select * from pricing_current_calculations')).rows.length,6);
  }finally{await db.close();}
 });
+
+
+test('discount rounding matches PostgreSQL numeric at half-cent boundaries',async()=>{
+ const {effectivePriceAfterDiscount}=await import(solver);
+ const db=new PGlite();
+ try{
+   const {rows}=await db.query(`select cents/100.0 announced, discount, round(cents/100.0*(1-discount/100),2) expected from generate_series(1,30000,5) cents cross join (values (10::numeric),(15),(12.3456),(0),(99.9999)) rates(discount)`);
+   for(const row of rows)assert.equal(effectivePriceAfterDiscount(Number(row.announced),Number(row.discount)),Number(row.expected),JSON.stringify(row));
+   assert.equal(effectivePriceAfterDiscount(1.15,10),1.04);
+ }finally{await db.close();}
+});
