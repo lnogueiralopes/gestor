@@ -144,12 +144,12 @@ table,input,textarea,select{font-family:Montserrat,Arial,sans-serif;font-variant
 .pricingMatrixTable th { white-space:nowrap; }
 .pricingMatrixTable th:nth-child(1) { width:132px; }
 .pricingMatrixTable td:first-child .matrixText { font-size:10px; letter-spacing:-.2px; }
-.pricingMatrixTable th:nth-child(n+8),.pricingMatrixTable td:nth-child(n+8) { text-align:right; }
+.pricingMatrixTable th:nth-child(n+6),.pricingMatrixTable td:nth-child(n+6) { text-align:right; }
 .pricingMatrixTable th:nth-child(2),.pricingMatrixTable th:nth-child(3),.pricingMatrixTable th:nth-child(5) { width:118px; }
 .pricingMatrixTable th:nth-child(4) { width:88px; }
-.pricingMatrixTable th:nth-child(6) { width:97px; }
-.pricingMatrixTable th:nth-child(7) { width:76px; }
-.pricingMatrixTable th:nth-child(8),.pricingMatrixTable th:nth-child(9) { width:57px; }
+.pricingMatrixTable th:nth-child(6) { width:57px; }
+.pricingMatrixTable th:nth-child(7) { width:57px; }
+.pricingMatrixTable th:nth-child(n+8):not(.lastCalculation):not(.calculateAction) { width:60px; }
 .pricingMatrixTable .matrixText { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pricingMatrixTable .columnFilter,.pricingMatrixTable .columnFilter:focus { width:19px; margin-left:3px; }
 .pricingMatrixTable .matrixPrice { border:0; border-radius:0; background:transparent; color:inherit; font:inherit; font-weight:600; padding:3px 0; cursor:pointer; }
@@ -158,6 +158,6 @@ table,input,textarea,select{font-family:Montserrat,Arial,sans-serif;font-variant
 .freightGroups td { padding:8px 6px; font-size:12px; }
 .freightGroups .pendingFreight { background:#fff4d6; }
 .freightGroups td small { display:block; }
-.pricingMatrixTable .lastCalculation { width:130px; font-size:11px; text-align:left; }
+.pricingMatrixTable .lastCalculation { width:112px; font-size:11px; text-align:left; }
 .pricingMatrixTable .calculateAction { width:64px; text-align:center; }
 .pricingMatrixTable .calculateAction .roundAction { width:28px; height:28px; min-width:28px; padding:3px; }

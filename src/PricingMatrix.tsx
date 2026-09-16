@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {families} from './ProductFamilies';
 
 type Row=Record<string,any>;
-const fields=[['ean','EAN / SKU'],['winery','Vinícola'],['brand','Marca'],['product_type','Tipo'],['varietal','Variedade'],['size','Tamanho'],['vintage','Safra']] as const;
+const fields=[['ean','EAN / SKU'],['winery','Vinícola'],['brand','Marca'],['product_type','Tipo'],['varietal','Variedade']] as const;
 const integer=(value:number)=>Math.trunc(value).toLocaleString('pt-BR',{maximumFractionDigits:0});
 const exact=(value:number)=>value.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:4});
 
@@ -31,7 +31,7 @@ export default function PricingMatrix({rows,tables,blocked,onDetail,onCalculate,
         const issue=blocked.find(b=>b.product===p.product_id&&(!b.table||(b.table===c.table.id&&b.modality===c.modality)));
         return <td key={c.table.id+String(c.modality)}>{issue?<span title={issue.message} aria-label={issue.message}>—</span>:row?.calculated_price!=null?<button className="matrixPrice" title={exact(Number(row.calculated_price))+' — '+c.label} aria-label={'Ver cálculo de '+p.name+' / '+c.label} onClick={()=>onDetail(row)}>{integer(Number(row.calculated_price))}</button>:'—'}</td>;
       })}
-      <td className="lastCalculation">{p.last_calculated?new Date(p.last_calculated).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'Nunca'}</td><td className="calculateAction"><button className="roundAction" title={busyProducts.includes(p.product_id)?'Calculando...':'Calcular'} aria-label={'Calcular '+p.name} disabled={generalBusy||busyProducts.includes(p.product_id)} onClick={()=>onCalculate(p.product_id)}>↻</button>{busyProducts.includes(p.product_id)&&<small>Calculando...</small>}{errors[p.product_id]&&<small role="alert">{errors[p.product_id]}</small>}</td>
+      <td className="lastCalculation">{p.last_calculated?new Date(p.last_calculated).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',', ''):'Nunca'}</td><td className="calculateAction"><button className="roundAction" title={busyProducts.includes(p.product_id)?'Calculando...':'Calcular'} aria-label={'Calcular '+p.name} disabled={generalBusy||busyProducts.includes(p.product_id)} onClick={()=>onCalculate(p.product_id)}>↻</button>{busyProducts.includes(p.product_id)&&<small>Calculando...</small>}{errors[p.product_id]&&<small role="alert">{errors[p.product_id]}</small>}</td>
     </tr>)}</tbody></table>{!products.length&&<p>Nenhum produto nesta família com os filtros selecionados.</p>}</div>
   </>;
 }
