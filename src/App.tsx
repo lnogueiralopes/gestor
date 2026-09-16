@@ -1,3 +1,5 @@
+import AccountPriceTables from './AccountPriceTables';
+import Listings from './Listings';
 import {parseCostCsv,saveCostRow} from './lib/costImport';
 import TopNavigation from './TopNavigation';
 import PricingMatrix from './PricingMatrix';
@@ -145,7 +147,6 @@ function Pricing() {
   const [showKitRules, setShowKitRules] = useState(false);
   const [costFile, setCostFile] = useState('');
   const [costFamily, setCostFamily] = useState('Todas');
-  const [accountTables, setAccountTables] = useState(() => Object.fromEntries(accounts.map(account => [account.id, account.priceTable])));
   const [matrixRows,setMatrixRows]=useState<any[]>([]);
   const [dbTables,setDbTables]=useState<any[]>([]);
   const [costProducts,setCostProducts]=useState<any[]>([]);
@@ -166,11 +167,8 @@ function Pricing() {
   const [logUserNames,setLogUserNames]=useState<Record<string,string>>({});
   const [freightRows,setFreightRows]=useState<any[]>([]);
   const [feeRows,setFeeRows]=useState<any[]>([]);
-  const [connectedAccounts,setConnectedAccounts]=useState<any[]>([]);
   useEffect(()=>{if(supabase)supabase.from('pricing_tables').select('*').order('channel').order('name').then(({data})=>{if(data)setDbTables(data.map(t=>({...t,adjustment:Number(t.adjustment_percent||0)})));});},[]);
   useEffect(()=>{if(!supabase)return; supabase.from('pricing_parameters').select('code,value,unit').in('code',['tax_percent','safety_reserve_percent','operational_cost']).then(({data})=>{if(!data)return;setParams(current=>current.map(p=>{const code=p.key==='tax'?'tax_percent':p.key==='safety'?'safety_reserve_percent':'operational_cost';const row=data.find((x:any)=>x.code===code);return row?{...p,value:Number(row.value).toFixed(2).replace('.',',')}:p;}));});},[]);
-  useEffect(()=>{if(!supabase)return;supabase.auth.getSession().then(async({data})=>{if(!data.session)return;const response=await fetch('/api/marketplaces/mercadolivre/status',{headers:{Authorization:'Bearer '+data.session.access_token}});const result=await response.json();if(Array.isArray(result.connections))setConnectedAccounts(result.connections.map((c:any)=>({id:'ml-'+c.seller_id,name:c.account_name||c.seller_id,channel:'Mercado Livre',priceTable:'ml-classic'})));});},[]);
-  const accountList = connectedAccounts.length ? connectedAccounts : accounts.filter(a=>a.channel==='Mercado Livre');
   const activeTables = dbTables.length ? dbTables : priceTables;
   const loadMatrix=async(productId?:string)=>{
     if(!supabase)return;
@@ -196,7 +194,6 @@ function Pricing() {
   const isCalcModule = section === 'calc' || section === 'freight' || section === 'tariffs' || section === 'matrix';
   const topSection = isCalcModule ? 'calc' : section;
   const [logPeriod, setLogPeriod] = useState('7'); const [calcDetail,setCalcDetail]=useState('');
-  const tableFor = (account: any) => activeTables.filter(table => table.channel === account.channel);
   const recordPricingLog = async (action:string, count:number, details:any) => {
     if (!supabase) return;
     const {data:userData}=await supabase.auth.getUser();
@@ -345,7 +342,7 @@ function Pricing() {
           <button className="primary" disabled>Salvar regras</button>
         </div>}
       </div>}
-      {section==='accounts' && <div className="accountTableGroups">{Array.from(new Set(accountList.map(a=>a.channel))).map(channel=>{const channelAccounts=accountList.filter(a=>a.channel===channel);return <div className="card accountTableGroup" key={channel}><div className="sectionHeading"><h3>{channel}</h3></div>{channelAccounts.map(account=><div className="accountTableRow" key={account.id}><strong>{account.name}</strong><select aria-label={`Tabela da conta ${account.name}`} value={accountTables[account.id]||''} onChange={e=>setAccountTables(current=>({...current,[account.id]:e.target.value}))}>{tableFor(account).map(table=><option key={table.id} value={table.id}>{table.name}</option>)}</select></div>)}</div>})}</div>}
+      {section==='accounts' && <AccountPriceTables/>}
       {section==='matrix' && <PricingMatrix rows={matrixRows} tables={dbTables} blocked={recalcJob?.scope?.blocked||[]} onDetail={row=>setCalcDetail(calculationTicket(row))} onCalculate={id=>void requestRecalculation(id)} busyProducts={individualBusy} generalBusy={recalcBusy} errors={individualErrors}/>}
       {calcDetail&&<div className="calcModalBackdrop" onClick={()=>setCalcDetail('')}><div className="calcModal" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><button className="calcModalClose" onClick={()=>setCalcDetail('')}>×</button><h3>Memória de cálculo</h3><pre className="calculationTicket">{calcDetail}</pre></div></div>}
       {section==='tables' && <div className="priceTableGroups">{['Mercado Livre','Shopee','Ruta Direct Shop'].map(channel=>{const ts=activeTables.filter(t=>t.channel===channel);return <div className="card priceTableGroup" key={channel}><div className="sectionHeading"><h3>{channel}</h3><button className="roundAction addAction" type="button" title="Cadastrar tabela" aria-label="Cadastrar tabela" disabled>+</button></div><table><tbody>{ts.map(t=><tr key={t.id}><td>{t.name}</td><td><button className="infoButton" type="button" title={t.adjustment?'Preço com gordura para compensar 10% de desconto e preservar o resultado planejado.':'Preço calculado com custo, margem e premissas para entregar o resultado planejado.'} aria-label="Detalhes do cálculo">ⓘ</button></td></tr>)}</tbody></table></div>})}</div>}</>
@@ -402,7 +399,7 @@ function AppShell() {
           <Route path="/produtos" element={<Matrix key="products" kind="products" />} />
           <Route path="/kits" element={<Matrix key="kits" kind="kits" />} />
           <Route path="/precificador/*" element={<Pricing />} />
-          <Route path="/anuncios" element={<Placeholder title="Anúncios" description="Fila de preparação, validação, publicação e sincronização." />} />
+          <Route path="/anuncios" element={<Listings />} />
           <Route path="/pedidos" element={<Placeholder title="Pedidos" description="Pedidos centralizados por canal e impacto no estoque físico." />} />
           <Route path="/contas" element={<Accounts />} />
           <Route path="/usuarios" element={<Users />} />

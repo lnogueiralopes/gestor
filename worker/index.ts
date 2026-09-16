@@ -1,3 +1,4 @@
+import {listings} from './listings';
 import { listUsers } from './users';
 import { mercadoLivre } from './mercadolivre';
 import { pricing } from './pricing';
@@ -24,6 +25,7 @@ const json = (data: unknown, status = 200) =>
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/listings/')) return listings(request,env);
     if (url.pathname === '/api/pricing/freight-group/quote') return quoteFreightGroup(request, env);
     if (url.pathname === '/api/pricing/recalculate') return pricing(request, env);
     if (url.pathname === '/api/admin/users') return listUsers(request, env);
